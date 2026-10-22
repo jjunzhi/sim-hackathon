@@ -1,0 +1,5 @@
+{
+  "_note": "Test accounts for the LOCAL Firebase Auth emulator (project demo-weddingvista) only. They don't exist anywhere else. The emulator forgets them when it stops.",
+  "vendor": { "email": "vendor.walkthrough@example.test", "password": "Emulator-Only-7f3k" },
+  "couple": { "email": "couple.walkthrough@example.test", "password": "Emulator-Only-9q2m" }
+}

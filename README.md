@@ -2,26 +2,87 @@
 
 A Singapore wedding venue and decor platform. Vendors load their real spaces, decor and prices. Couples see their chosen room decorated with only items the vendor can deliver, and get an honest itemised estimate.
 
-**Status: Phase 0, design foundation.** No Firebase or Gemini yet.
+**Status: Phase 1, foundation.** Auth, roles, PDPA consent, vendor venue onboarding, photo uploads, security rules and account deletion. Everything runs on the local Firebase emulators; nothing is deployed.
 
 ## Requirements
 
-- Node.js **22.22.2 or newer** (or 24.15+). Vitest 5 and jsdom 30 do not run on older 22.x releases.
+- Node.js **24.12 or newer**. The Firebase JS SDK 13 and `@firebase/rules-unit-testing` 6 require it.
+- **Java (JDK 21 LTS recommended; Firebase documents 11 as the minimum)** for the Firebase emulators.
+- Chrome or Edge, only for `npm run screenshots`.
 
-## Commands
+## First run (local, no Google account needed)
 
 ```bash
 npm install
-npm run dev            # http://localhost:3000, design system at /design
-npm test               # unit tests (money, capacity, token drift)
-npm run check:contrast # WCAG AA table for every colour pair in both themes
-npm run typecheck
-npm run lint
-npm run build
-npm run screenshots    # with dev server running: /design at 390/768/1366 in both themes -> docs/screenshots/phase0
+npm run functions:install
+cp .env.example .env.local   # already set up for the emulators
 ```
 
-`npm run screenshots` drives a local Chrome or Edge over the DevTools protocol, so viewport widths are exact. It also reports horizontal overflow and console errors for each capture. Set `REDUCED_MOTION=1` to capture with reduced motion emulated.
+Then, in two terminals:
+
+```bash
+npm run emulators      # Auth, Firestore, Storage, Functions; UI at http://127.0.0.1:4000
+npm run dev            # http://localhost:3000
+```
+
+The emulators use the project ID `demo-weddingvista`. A `demo-` project only ever exists on your machine, and the app refuses to run in emulator mode with any other project ID.
+
+## Tests
+
+```bash
+npm test               # unit tests: money, capacity, validation, image sizing, config (no emulators)
+npm run test:rules     # Firestore and Storage security rules, against the emulators
+npm run test:functions # account deletion end to end, against the emulators
+npm run test:all       # all three
+npm run check:contrast # WCAG AA table for every colour pair in both themes
+npm run typecheck && npm run lint && npm run build
+```
+
+`test:rules` and `test:functions` start and stop the emulators themselves through `firebase emulators:exec`, so don't run them while `npm run emulators` is already running.
+
+## Firebase setup (real project, later)
+
+1. Create a Firebase project and **upgrade it to the Blaze plan**. Cloud Storage and Cloud Functions both need Blaze (Storage since February 2026, even for old buckets).
+2. Choose **asia-southeast1 (Singapore)** for Firestore and Storage. This can't be changed later.
+3. Enable **Authentication**, with the Email/Password and Google providers.
+4. Add a **Web app** and copy its config into `.env.local`. Set `NEXT_PUBLIC_FIREBASE_USE_EMULATORS=false`.
+5. **App Check:** create a score-based reCAPTCHA Enterprise key, register it in App Check, and set `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY`. Don't add `localhost` to the key's domains; use an App Check debug token for local testing instead.
+6. Deploy the rules and functions: `npx firebase deploy --only firestore,storage,functions --project <your-project-id>`.
+
+### Cost safety: set a budget alert
+
+Do this before deploying anything to Blaze:
+
+1. Open Google Cloud console > Billing > **Budgets & alerts** > Create budget.
+2. Scope it to the WeddingVista project. Set a monthly amount, for example S$20 during the pilot.
+3. Set alert thresholds at 50%, 90% and 100% of actual spend, and 100% of forecasted spend. Send them to billing admins plus your email.
+4. Optionally connect the budget to Pub/Sub to cap spend automatically. Budgets only alert; they never stop charges on their own.
+
+The deletion function is capped at 10 instances (`maxInstances`). Render quotas arrive in Phase 3.
+
+## Accounts, roles and personal data
+
+- **Roles:** `couple` or `vendor`, chosen once at sign-up. It is stored in `users/{uid}` with the PDPA consent record (consent text version plus server time). The rules allow creating this document once and never updating or deleting it from the client.
+- **Minimum data:** the profile holds only role, consent and creation time. The email address lives in Firebase Auth only.
+- **Consent wording** is in `src/lib/legal.ts`, marked DRAFT. Bump `CONSENT_VERSION` whenever the text changes.
+- **Account deletion** (Account page) needs a fresh sign-in. It then calls the `deleteAccount` Cloud Function, which:
+  - removes the user's Firestore data and Storage files using the steps in `functions/src/deletion.ts`;
+  - then deletes the Auth account.
+
+  Later phases add their own deletion steps there (renders, projects, share links, votes, leads).
+- **"Verified"** is admin-only. Set `verified: true` on a venue in the Firebase console. The rules stop vendors from changing it.
+- Re-encoding photos on the device strips EXIF metadata, including GPS location.
+
+## Data model (Phase 1)
+
+| Path | Who can read | Who can write |
+| --- | --- | --- |
+| `users/{uid}` | that user | that user, create only |
+| `venues/{venueId}` | anyone if `status == "active"`; the owner always | vendors create their own drafts; the owner updates (never `verified` or `ownerUid`) |
+| `venues/{venueId}/spaces/{spaceId}` | same as the venue | the venue owner |
+| Storage `venues/{venueId}/**` | anyone if the venue is active; the owner always | the venue owner; WebP or JPEG only, up to 3 MB |
+
+Prices are integer cents. Each space has one `standard` tier, or both `peak` and `offPeak`, each with `roomRentalCents` and an optional `minimumSpendCents`. Tax settings sit on the venue: service charge 1000 or 0 bps, GST 900 or 0 bps, plus editable notes shown when either is 0.
 
 ## Layout
 
@@ -29,19 +90,27 @@ npm run screenshots    # with dev server running: /design at 390/768/1366 in bot
 | --- | --- |
 | `src/lib/money.ts` | Integer SGD cents, basis-point rates, half-up rounding, `tablesForHeadcount`, UI-only formatting |
 | `src/lib/capacity.ts` | Capacity status and the "185 guests = 19 tables of 10" line |
+| `src/lib/venues/*` | Venue and space types, validation (mirrors the rules), publish checklist |
+| `src/lib/images/*` | On-device resize to 2048px, WebP with JPEG fallback, HEIC via `heic-to` |
+| `src/lib/firebase/*` | Settings check (clear error, no fallback) and client initialisation |
+| `src/lib/data/*` | Firestore and Storage reads and writes |
+| `src/app/(app)/*` | Sign-up, sign-in, welcome, account, vendor area (client-rendered) |
+| `functions/` | Cloud Functions (Node 24, asia-southeast1): `deleteAccount` |
+| `firestore.rules`, `storage.rules` | Security rules; tests in `tests/rules` |
 | `src/lib/motion.ts` | All shared durations, easings, transitions and variants |
-| `src/design/tokens.mjs` | Colour tokens for both themes and the list of pairs the contrast script checks |
-| `src/app/globals.css` | CSS variables (mirrors tokens; a test fails on drift) and the Tailwind v4 theme |
+| `src/design/tokens.mjs` | Colour tokens for both themes and the pairs the contrast script checks |
 | `src/components/ui/*` | Base components |
-| `scripts/check-contrast.mjs` | `npm run check:contrast` |
-| `public/samples/*` | Hand-drawn SAMPLE illustrations (original work, no licence concerns) |
 | `legacy/index.html` | Earlier "Bersama" prototype, kept for reference only |
 
 ## Design decisions
 
-- **Accessible primitives: Radix UI** (`radix-ui` package). It ships Dialog, Select, Slider, Checkbox and Toast with tested focus trapping, keyboard support and ARIA, and no styling of its own. Headless UI has no Slider or Toast. Modal and BottomSheet are both Radix Dialog with Motion animations. The before/after slider is custom (`role="slider"`), because it needs pointer-capture dragging over an image.
-- **Animation: Motion** (`motion`, imported from `motion/react`). `<MotionConfig reducedMotion="user">` turns off transform animations when the device asks for reduced motion. Count-ups, pulses and shimmer are turned off separately.
-- **Theme:** the couple light theme is the default. Adding `.vendor-dark` to `<html>` swaps every token, so portalled overlays follow the theme.
-- **Vendor `accent-text` is `#E07D90`, not `#D46A7E`.** `#D46A7E` measures 4.34:1 on `bg-subtle` and 4.29:1 on `accent-tint`, which fails the 4.5:1 text rule. `#E07D90` is the vendor hover colour, matching the couple theme, where accent text equals hover (`#A84457`). Button backgrounds still use `#D46A7E`.
-- **Overlays restore focus themselves.** Radix only returns focus to its own `Dialog.Trigger`. Our Modal and BottomSheet open from state, so they record the element that had focus when they open and return to it when they close.
-- **Added token `border-strong`.** The specified border colour `#E6DDD3` is too faint to meet the 3:1 rule for form controls, so inputs, checkboxes and the slider track use `#8E8079` (light) or `#85787C` (dark). Card dividers keep `#E6DDD3`, where it is decorative.
+- **Accessible primitives: Radix UI** (`radix-ui` package). It ships Dialog, Select, Slider, Checkbox and Toast with tested focus trapping, keyboard support and ARIA, and no styling of its own. Headless UI has no Slider or Toast.
+- **Animation: Motion** (`motion`, imported from `motion/react`). `<MotionConfig reducedMotion="user">` turns off transform animations when the device asks for reduced motion.
+- **Theme:** the couple light theme is the default. The vendor area adds `.vendor-dark` to `<html>`, so portalled overlays follow it.
+- **Vendor `accent-text` is `#E07D90`.** `#D46A7E` fails the 4.5:1 text rule on `bg-subtle` and `accent-tint`.
+- **Added token `border-strong`** for form controls, because `#E6DDD3` can't reach 3:1.
+- **Overlays restore focus themselves**, because Radix only returns focus to its own `Dialog.Trigger`.
+- **Roles live in a write-once Firestore document, not custom claims.** Setting claims at sign-up needs blocking functions, which need the paid Identity Platform upgrade.
+- **HEIC is converted on the device only.** Safari 17+ decodes it natively. Other browsers load `heic-to` (LGPL-3.0, as a separate chunk) on demand. There is no server fallback, because `sharp` can't read HEIC. If conversion fails, the vendor is asked to export a JPEG.
+- **Images are resized with plain canvas, not a library.** `browser-image-compression` hasn't been updated since 2023. Safari can't encode WebP and silently returns PNG, so the code checks the result type and falls back to JPEG.
+- **Google sign-in uses a popup**, because redirect sign-in breaks when browsers block third-party storage.

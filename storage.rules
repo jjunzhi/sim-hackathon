@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// Every rule here has a test in tests/rules/storage.rules.test.ts.
+// Ownership and publish state come from Firestore (cross-service rules);
+// each request reads the one venue document.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function venue(venueId) {
+      return firestore.get(/databases/(default)/documents/venues/$(venueId)).data;
+    }
+
+    function ownsVenue(venueId) {
+      return request.auth != null && venue(venueId).ownerUid == request.auth.uid;
+    }
+
+    // Client resizes to 2048px WebP/JPEG first; this is the server-side check.
+    function validImage() {
+      return request.resource.size > 0
+        && request.resource.size <= 3 * 1024 * 1024
+        && request.resource.contentType in ['image/webp', 'image/jpeg'];
+    }
+
+    match /venues/{venueId}/{allPaths=**} {
+      allow read: if venue(venueId).status == 'active' || ownsVenue(venueId);
+      // {allPaths=**} is a path, not a string, so match on the object's full name.
+      allow create, update: if ownsVenue(venueId)
+        && validImage()
+        && request.resource.name.matches('venues/' + venueId + '/[A-Za-z0-9/_-]+[.](webp|jpg)');
+      allow delete: if ownsVenue(venueId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
