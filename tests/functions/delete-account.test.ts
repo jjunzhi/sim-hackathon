@@ -2,7 +2,7 @@ import type { RulesTestEnvironment } from "@firebase/rules-unit-testing";
 import { doc, getDoc } from "firebase/firestore";
 import { getBytes, ref, uploadBytes } from "firebase/storage";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { BUCKET, PROJECT_ID, fixedTime, makeEnv, newSpace, seed, seedUser, seedVenue } from "../rules/setup";
+import { BUCKET, PROJECT_ID, fixedTime, makeEnv, newItem, newPackage, newSpace, seed, seedUser, seedVendor, seedVenue } from "../rules/setup";
 
 const AUTH = "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1";
 const FN = `http://127.0.0.1:5001/${PROJECT_ID}/asia-southeast1/deleteAccount`;
@@ -89,9 +89,17 @@ describe("deleteAccount", () => {
     await putFile("venues/mine/spaces/s1/a.webp");
     await putFile("venues/mine/cover/c.webp");
 
+    await seedVendor(env, me.uid, true);
+    await seed(env, `vendors/${me.uid}/items/i1`, { ...newItem(), createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `vendors/${me.uid}/packages/p1`, { ...newPackage({ itemIds: ["i1"] }), createdAt: fixedTime, updatedAt: fixedTime });
+    await putFile(`vendors/${me.uid}/items/i1/x.webp`);
+
     await seedUser(env, other.uid, "vendor");
     await seedVenue(env, "theirs", other.uid, "active");
     await putFile("venues/theirs/spaces/s1/b.webp");
+    await seedVendor(env, other.uid, true);
+    await seed(env, `vendors/${other.uid}/items/i9`, { ...newItem(), createdAt: fixedTime, updatedAt: fixedTime });
+    await putFile(`vendors/${other.uid}/items/i9/y.webp`);
 
     const res = await callDelete(me.idToken);
     expect(res.error).toBeUndefined();
@@ -102,12 +110,18 @@ describe("deleteAccount", () => {
     expect(await docExists("venues/mine/spaces/s1")).toBe(false);
     expect(await fileExists("venues/mine/spaces/s1/a.webp")).toBe(false);
     expect(await fileExists("venues/mine/cover/c.webp")).toBe(false);
+    expect(await docExists(`vendors/${me.uid}`)).toBe(false);
+    expect(await docExists(`vendors/${me.uid}/items/i1`)).toBe(false);
+    expect(await docExists(`vendors/${me.uid}/packages/p1`)).toBe(false);
+    expect(await fileExists(`vendors/${me.uid}/items/i1/x.webp`)).toBe(false);
     expect(await authUserExists(me.idToken)).toBe(false);
 
     // Another vendor's data is untouched.
     expect(await docExists(`users/${other.uid}`)).toBe(true);
     expect(await docExists("venues/theirs")).toBe(true);
     expect(await fileExists("venues/theirs/spaces/s1/b.webp")).toBe(true);
+    expect(await docExists(`vendors/${other.uid}/items/i9`)).toBe(true);
+    expect(await fileExists(`vendors/${other.uid}/items/i9/y.webp`)).toBe(true);
     expect(await authUserExists(other.idToken)).toBe(true);
   });
 

@@ -18,7 +18,7 @@ export default function NewVenuePage() {
     <main className="container-page flex flex-col gap-6 py-10">
       <Link href="/vendor" className="inline-flex min-h-11 w-fit items-center gap-2 text-small font-semibold text-muted hover:text-ink">
         <ArrowLeft aria-hidden className="size-4" />
-        Your venues
+        Overview
       </Link>
       <div className="flex flex-col gap-1">
         <h1 className="text-h1">Add a venue</h1>

@@ -13,7 +13,7 @@ export function AppHeader() {
 
   // On phones "Account" shrinks to an icon (label kept for screen readers) so the bar fits at 390px.
   const links: Array<{ href: string; label: string; icon?: React.ReactNode }> = [
-    ...(role === "vendor" ? [{ href: "/vendor", label: "Your venues" }] : []),
+    ...(role === "vendor" ? [{ href: "/vendor", label: "Vendor home" }] : []),
     { href: "/account", label: "Account", icon: <UserRound aria-hidden className="size-4 sm:hidden" /> },
   ];
 

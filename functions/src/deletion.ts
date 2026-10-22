@@ -27,6 +27,13 @@ export const deletionSteps: Array<{ name: string; run: (ctx: DeletionContext) =>
     },
   },
   {
+    name: "vendor business profile, inventory, packages and photos",
+    run: async ({ uid, db, bucket }) => {
+      await bucket.deleteFiles({ prefix: `vendors/${uid}/` });
+      await db.recursiveDelete(db.collection("vendors").doc(uid));
+    },
+  },
+  {
     name: "user files",
     run: async ({ uid, bucket }) => {
       await bucket.deleteFiles({ prefix: `users/${uid}/` });

@@ -62,13 +62,14 @@ service cloud.firestore {
         && isText(t.noGstNote, 200);
     }
 
-    function validPhoto(p, venueId) {
+    // folder: the Storage folder the photo must live in, e.g. "venues/abc".
+    function validPhoto(p, folder) {
       return p == null || (
         p is map
         && p.keys().hasOnly(['path', 'width', 'height', 'contentType'])
         && p.keys().hasAll(['path', 'width', 'height', 'contentType'])
         && p.path is string
-        && p.path.matches('venues/' + venueId + '/[A-Za-z0-9/_-]+[.](webp|jpg)')
+        && p.path.matches(folder + '/[A-Za-z0-9/_-]+[.](webp|jpg)')
         && isInt(p.width, 1, 4096)
         && isInt(p.height, 1, 4096)
         && p.contentType in ['image/webp', 'image/jpeg']
@@ -76,13 +77,14 @@ service cloud.firestore {
     }
 
     function validVenue(d, venueId) {
+      // Tax settings live on the vendor's business profile, not the venue.
       return d.keys().hasOnly([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
-          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'tax', 'coverPhoto',
+          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
           'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
-          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'tax', 'coverPhoto',
+          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
           'createdAt', 'updatedAt'])
         && d.status in ['draft', 'active']
         && d.name is string && d.name.size() > 0 && d.name.size() <= 120
@@ -93,8 +95,7 @@ service cloud.firestore {
         && validTags(d.cultureTags)
         && d.wheelchairAccess is bool
         && d.liftAccess is bool
-        && validTax(d.tax)
-        && validPhoto(d.coverPhoto, venueId)
+        && validPhoto(d.coverPhoto, 'venues/' + venueId)
         && d.updatedAt == request.time;
     }
 
@@ -161,7 +162,7 @@ service cloud.firestore {
           && d.capacityMin <= d.capacityMax
           && isInt(d.seatsPerTable, 1, 30)
           && validTiers(d.tiers)
-          && validPhoto(d.photo, venueId)
+          && validPhoto(d.photo, 'venues/' + venueId)
           && isInt(d.sortOrder, 0, 1000)
           && d.updatedAt == request.time;
       }
@@ -182,6 +183,102 @@ service cloud.firestore {
               || request.resource.data.photoVersion == resource.data.photoVersion + 1);
 
         allow delete: if ownsVenue();
+      }
+    }
+
+    // ---------- vendors/{uid}: business profile, inventory, packages ----------
+    function validVendor(d) {
+      return d.keys().hasOnly([
+          'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
+          'published', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll([
+          'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
+          'published', 'createdAt', 'updatedAt'])
+        && d.kinds is list && d.kinds.size() >= 1 && d.kinds.size() <= 2
+        && d.kinds.hasOnly(['venue', 'decorator'])
+        && d.businessName is string && d.businessName.size() > 0 && d.businessName.size() <= 120
+        && isText(d.description, 2000)
+        && validTax(d.tax)
+        && d.servesAnyVenue is bool
+        && d.servesVenueIds is list && d.servesVenueIds.size() <= 50
+        && d.published is bool
+        && d.updatedAt == request.time;
+    }
+
+    function validPrice(p) {
+      return isInt(p, 0, 100000000000);
+    }
+
+    match /vendors/{uid} {
+      function ownsVendor() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      function vendorPublished() {
+        return get(/databases/$(database)/documents/vendors/$(uid)).data.published == true;
+      }
+
+      function vendorExists() {
+        return exists(/databases/$(database)/documents/vendors/$(uid));
+      }
+
+      allow read: if resource.data.published == true || ownsVendor();
+      allow create: if ownsVendor() && isVendor()
+        && validVendor(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if ownsVendor()
+        && validVendor(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      // Removed only by account deletion (Admin SDK).
+      allow delete: if false;
+
+      function validItem(d) {
+        return d.keys().hasOnly(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && d.category in ['Florals', 'Lighting', 'Backdrops and stage', 'Table decor', 'Furniture', 'Draping', 'Signage', 'Food and drink', 'Other']
+          && d.unit in ['piece', 'table', 'guest']
+          && validPrice(d.priceCents)
+          && isText(d.description, 1000)
+          && validPhoto(d.photo, 'vendors/' + uid)
+          && d.active is bool
+          && d.updatedAt == request.time;
+      }
+
+      function validPackage(d) {
+        return d.keys().hasOnly(['name', 'unit', 'priceCents', 'description', 'itemIds', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['name', 'unit', 'priceCents', 'description', 'itemIds', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && d.unit in ['piece', 'table', 'guest']
+          && validPrice(d.priceCents)
+          && isText(d.description, 1000)
+          && d.itemIds is list && d.itemIds.size() >= 1 && d.itemIds.size() <= 30
+          && validPhoto(d.photo, 'vendors/' + uid)
+          && d.active is bool
+          && d.updatedAt == request.time;
+      }
+
+      // Couples see active items only once the business is published.
+      match /items/{itemId} {
+        allow read: if ownsVendor() || (resource.data.active == true && vendorPublished());
+        allow create: if ownsVendor() && vendorExists()
+          && validItem(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if ownsVendor()
+          && validItem(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if ownsVendor();
+      }
+
+      match /packages/{packageId} {
+        allow read: if ownsVendor() || (resource.data.active == true && vendorPublished());
+        allow create: if ownsVendor() && vendorExists()
+          && validPackage(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if ownsVendor()
+          && validPackage(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if ownsVendor();
       }
     }
 

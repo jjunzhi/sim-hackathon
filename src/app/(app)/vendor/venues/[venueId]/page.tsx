@@ -7,7 +7,6 @@ import { ArrowLeft, CircleCheck, Circle } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { PhotoPicker } from "@/components/photos/photo-picker";
 import { SpacesEditor } from "@/components/vendor/spaces-editor";
-import { TaxForm } from "@/components/vendor/tax-form";
 import { VenueDetailsForm } from "@/components/vendor/venue-details-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { JourneyStepper } from "@/components/ui/journey-stepper";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { updateVenue, uploadCoverPhoto, watchSpaces, watchVenue, type WithId } from "@/lib/data/venues";
+import { setVenueStatus, updateVenue, uploadCoverPhoto, watchSpaces, watchVenue, type WithId } from "@/lib/data/venues";
 import { stepVariants } from "@/lib/motion";
 import type { Space, Venue } from "@/lib/venues/model";
 import { canPublish, publishChecklist } from "@/lib/venues/publish";
@@ -23,7 +22,6 @@ import { canPublish, publishChecklist } from "@/lib/venues/publish";
 const STEPS = [
   { id: "details", label: "Details" },
   { id: "spaces", label: "Spaces and prices" },
-  { id: "tax", label: "Tax" },
   { id: "publish", label: "Publish" },
 ];
 
@@ -87,7 +85,7 @@ function VenueEditor() {
       <div className="flex flex-col gap-3">
         <Link href="/vendor" className="inline-flex min-h-11 w-fit items-center gap-2 text-small font-semibold text-muted hover:text-ink">
           <ArrowLeft aria-hidden className="size-4" />
-          Your venues
+          Overview
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-h1">{venue.name}</h1>
@@ -142,15 +140,7 @@ function VenueEditor() {
 
           {stepIndex === 1 && <SpacesEditor venueId={venue.id} spaces={spaces} />}
 
-          {stepIndex === 2 && (
-            <Card>
-              <CardBody>
-                <TaxForm venueId={venue.id} initial={venue.tax} />
-              </CardBody>
-            </Card>
-          )}
-
-          {stepIndex === 3 && <PublishPanel venue={venue} checks={checks} />}
+          {stepIndex === 2 && <PublishPanel venue={venue} checks={checks} />}
         </motion.section>
       </AnimatePresence>
 
@@ -179,7 +169,7 @@ function PublishPanel({ venue, checks }: { venue: WithId<Venue>; checks: ReturnT
   async function setStatus(status: "draft" | "active") {
     setBusy(true);
     try {
-      await updateVenue(venue.id, { status });
+      await setVenueStatus(venue, status);
       toast({
         title: status === "active" ? "Venue published" : "Venue unpublished",
         description: status === "active" ? "Couples can now find it." : "It's hidden from couples until you publish again.",
@@ -204,6 +194,9 @@ function PublishPanel({ venue, checks }: { venue: WithId<Venue>; checks: ReturnT
             </li>
           ))}
         </ul>
+        <p className="max-w-2xl text-small text-muted">
+          Service charge and GST are set once for your whole business, on the Business page.
+        </p>
         <p className="max-w-2xl text-small text-muted">
           The &quot;Verified&quot; badge is added by the WeddingVista team after checking your listing. You can&apos;t add it yourself.
         </p>

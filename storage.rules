@@ -30,6 +30,16 @@ service firebase.storage {
       allow delete: if ownsVenue(venueId);
     }
 
+    // Inventory and package photos. The folder name is the owner's uid.
+    match /vendors/{uid}/{allPaths=**} {
+      allow read: if (request.auth != null && request.auth.uid == uid)
+        || firestore.get(/databases/(default)/documents/vendors/$(uid)).data.published == true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && validImage()
+        && request.resource.name.matches('vendors/' + uid + '/[A-Za-z0-9/_-]+[.](webp|jpg)');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

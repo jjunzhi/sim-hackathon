@@ -34,7 +34,6 @@ export function newVenue(ownerUid: string, overrides: Record<string, unknown> = 
     cultureTags: [],
     wheelchairAccess: true,
     liftAccess: false,
-    tax,
     coverPhoto: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -69,6 +68,55 @@ export const fixedTime = Timestamp.fromMillis(Date.UTC(2026, 9, 1));
 
 export async function seedUser(env: RulesTestEnvironment, uid: string, role: "couple" | "vendor") {
   await seed(env, `users/${uid}`, { role, consent: { version: "draft", acceptedAt: fixedTime }, createdAt: fixedTime });
+}
+
+export function newVendorProfile(overrides: Record<string, unknown> = {}) {
+  return {
+    kinds: ["decorator"],
+    businessName: "SAMPLE Blooms",
+    description: "",
+    tax,
+    servesAnyVenue: true,
+    servesVenueIds: [],
+    published: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+export function newItem(overrides: Record<string, unknown> = {}) {
+  return {
+    name: "SAMPLE Floral arch",
+    category: "Florals",
+    unit: "piece",
+    priceCents: 120_000,
+    description: "",
+    photo: null,
+    active: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+export function newPackage(overrides: Record<string, unknown> = {}) {
+  return {
+    name: "SAMPLE Garden package",
+    unit: "table",
+    priceCents: 25_000,
+    description: "",
+    itemIds: ["item1"],
+    photo: null,
+    active: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+export async function seedVendor(env: RulesTestEnvironment, uid: string, published = false) {
+  await seed(env, `vendors/${uid}`, { ...newVendorProfile({ published }), createdAt: fixedTime, updatedAt: fixedTime });
 }
 
 export async function seedVenue(env: RulesTestEnvironment, id: string, ownerUid: string, status: "draft" | "active" = "draft") {

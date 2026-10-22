@@ -12,12 +12,12 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { getFirebase } from "@/lib/firebase/client";
 import type { PreparedImage } from "@/lib/images/prepare-image";
-import { defaultTaxNotes } from "@/lib/legal";
 import type { Space, StoredPhoto, Venue } from "@/lib/venues/model";
 
 export type WithId<T> = T & { id: string };
@@ -36,7 +36,6 @@ export async function createVenue(ownerUid: string, profile: VenueProfileInput):
     ownerUid,
     status: "draft",
     verified: false,
-    tax: { serviceChargeBps: 1000, gstBps: 900, ...defaultTaxNotes },
     coverPhoto: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -47,6 +46,25 @@ export async function createVenue(ownerUid: string, profile: VenueProfileInput):
 export async function updateVenue(venueId: string, patch: Partial<Omit<Venue, "ownerUid" | "verified">>) {
   const { db } = getFirebase();
   await updateDoc(doc(db, "venues", venueId), { ...patch, updatedAt: serverTimestamp() });
+}
+
+/** Publishing a venue also publishes the business, so its items become visible to couples. */
+export async function setVenueStatus(venue: WithId<Venue>, status: Venue["status"]) {
+  const { db } = getFirebase();
+  const batch = writeBatch(db);
+  batch.update(doc(db, "venues", venue.id), { status, updatedAt: serverTimestamp() });
+  if (status === "active") batch.update(doc(db, "vendors", venue.ownerUid), { published: true, updatedAt: serverTimestamp() });
+  await batch.commit();
+}
+
+/** Published venues, for decorators choosing where they work. */
+export function watchPublishedVenues(onData: (venues: WithId<Venue>[]) => void, onError: (e: Error) => void): Unsubscribe {
+  const { db } = getFirebase();
+  return onSnapshot(
+    query(collection(db, "venues"), where("status", "==", "active")),
+    (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Venue) }))),
+    onError,
+  );
 }
 
 export function watchMyVenues(uid: string, onData: (venues: WithId<Venue>[]) => void, onError: (e: Error) => void): Unsubscribe {
@@ -99,11 +117,11 @@ export async function deleteSpace(venueId: string, space: WithId<Space>) {
   if (space.photo) await deleteObject(ref(storage, space.photo.path)).catch(() => undefined);
 }
 
-function randomId() {
+export function randomId() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-async function uploadPrepared(path: string, image: PreparedImage, onProgress?: (fraction: number) => void): Promise<StoredPhoto> {
+export async function uploadPrepared(path: string, image: PreparedImage, onProgress?: (fraction: number) => void): Promise<StoredPhoto> {
   const { storage } = getFirebase();
   const task = uploadBytesResumable(ref(storage, path), image.blob, {
     contentType: image.contentType,

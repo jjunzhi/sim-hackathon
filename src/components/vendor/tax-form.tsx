@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
-import { updateVenue } from "@/lib/data/venues";
 import { formatBps, type Bps } from "@/lib/money";
 import { LIMITS, type TaxSettings } from "@/lib/venues/model";
 
@@ -45,7 +44,8 @@ function Choice({
   );
 }
 
-export function TaxForm({ venueId, initial }: { venueId: string; initial: TaxSettings }) {
+/** Service charge and GST for the whole business (all venues, items and packages). */
+export function TaxForm({ initial, onSave }: { initial: TaxSettings; onSave: (tax: TaxSettings) => Promise<void> }) {
   const [tax, setTax] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function TaxForm({ venueId, initial }: { venueId: string; initial: TaxSet
     setBusy(true);
     setError(null);
     try {
-      await updateVenue(venueId, { tax: { ...tax, noGstNote: tax.noGstNote.trim(), noServiceChargeNote: tax.noServiceChargeNote.trim() } });
+      await onSave({ ...tax, noGstNote: tax.noGstNote.trim(), noServiceChargeNote: tax.noServiceChargeNote.trim() });
       toast({ title: "Tax settings saved", tone: "success" });
     } catch {
       setError("We couldn't save that. Please try again.");
@@ -79,7 +79,7 @@ export function TaxForm({ venueId, initial }: { venueId: string; initial: TaxSet
       />
       {tax.serviceChargeBps === 0 && (
         <Input
-          label="Note shown instead"
+          label="Note shown instead of service charge"
           value={tax.noServiceChargeNote}
           maxLength={LIMITS.noteMax}
           onChange={(e) => setTax({ ...tax, noServiceChargeNote: e.target.value })}
@@ -98,7 +98,7 @@ export function TaxForm({ venueId, initial }: { venueId: string; initial: TaxSet
       />
       {tax.gstBps === 0 && (
         <Input
-          label="Note shown instead"
+          label="Note shown instead of GST"
           value={tax.noGstNote}
           maxLength={LIMITS.noteMax}
           onChange={(e) => setTax({ ...tax, noGstNote: e.target.value })}
@@ -110,7 +110,7 @@ export function TaxForm({ venueId, initial }: { venueId: string; initial: TaxSet
           {error}
         </p>
       )}
-      <Button type="submit" variant="primary" loading={busy} className="self-start">
+      <Button type="submit" loading={busy} className="self-start">
         Save tax settings
       </Button>
     </form>

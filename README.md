@@ -2,7 +2,14 @@
 
 A Singapore wedding venue and decor platform. Vendors load their real spaces, decor and prices. Couples see their chosen room decorated with only items the vendor can deliver, and get an honest itemised estimate.
 
-**Status: Phase 1, foundation.** Auth, roles, PDPA consent, vendor venue onboarding, photo uploads, security rules and account deletion. Everything runs on the local Firebase emulators; nothing is deployed.
+**Status: Phase 2, inventory and estimate engine.** Builds on Phase 1 (auth, roles, PDPA consent, venue onboarding, photo uploads, security rules, account deletion). Phase 2 adds:
+
+- business profiles with decorator onboarding;
+- inventory and packages;
+- the estimate engine;
+- a vendor estimate preview.
+
+Everything runs on the local Firebase emulators; nothing is deployed.
 
 ## Requirements
 
@@ -39,6 +46,28 @@ npm run typecheck && npm run lint && npm run build
 ```
 
 `test:rules` and `test:functions` start and stop the emulators themselves through `firebase emulators:exec`, so don't run them while `npm run emulators` is already running.
+
+**UI walkthrough:** with `npm run emulators` (fresh data) and `npm run dev` running, run:
+
+```bash
+node scripts/e2e-phase2.mjs
+```
+
+It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
+
+## Estimate engine
+
+`src/lib/estimate/engine.ts` is pure and unit-tested, with one estimate per vendor. The order is:
+
+1. Room rental for the chosen tier.
+2. Items and packages: per piece = price x quantity; per table = price x ceil(guests / seats per table); per guest = price x guests.
+3. Subtotal.
+4. Minimum-spend shortfall, shown as its own line, never silently added.
+5. Service charge.
+6. GST on the subtotal plus service charge.
+7. Total and per-guest price.
+
+Rounding is half-up at each step. What counts towards the minimum spend is decided in one function, `minimumSpendBasis`. Every number in `docs/estimate-examples.md` was worked by hand and is asserted by the tests.
 
 ## Firebase setup (real project, later)
 
@@ -81,8 +110,11 @@ The deletion function is capped at 10 instances (`maxInstances`). Render quotas 
 | `venues/{venueId}` | anyone if `status == "active"`; the owner always | vendors create their own drafts; the owner updates (never `verified` or `ownerUid`) |
 | `venues/{venueId}/spaces/{spaceId}` | same as the venue | the venue owner |
 | Storage `venues/{venueId}/**` | anyone if the venue is active; the owner always | the venue owner; WebP or JPEG only, up to 3 MB |
+| `vendors/{uid}` (business profile) | anyone if published; the owner always | that vendor; never deleted from the client |
+| `vendors/{uid}/items`, `/packages` | the owner; anyone if active and the business is published | that vendor (profile must exist) |
+| Storage `vendors/{uid}/**` | the owner; anyone if the business is published | that vendor; WebP or JPEG only, up to 3 MB |
 
-Prices are integer cents. Each space has one `standard` tier, or both `peak` and `offPeak`, each with `roomRentalCents` and an optional `minimumSpendCents`. Tax settings sit on the venue: service charge 1000 or 0 bps, GST 900 or 0 bps, plus editable notes shown when either is 0.
+Prices are integer cents. Each space has one `standard` tier, or both `peak` and `offPeak`, each with `roomRentalCents` and an optional `minimumSpendCents`. Tax settings sit on the business profile and apply to all its venues, items and packages: service charge 1000 or 0 bps, GST 900 or 0 bps, plus editable notes shown when either is 0. Publishing a venue also publishes the business.
 
 ## Layout
 

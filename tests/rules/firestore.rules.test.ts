@@ -111,12 +111,8 @@ describe("venues", () => {
     await assertFails(addDoc(collection(db(VENDOR), "venues"), newVenue(VENDOR, { status: "active" })));
   });
 
-  it("validates tax settings: only 10% or 0 service charge, 9% or 0 GST", async () => {
-    const bad = (t: Record<string, unknown>) => newVenue(VENDOR, { tax: { serviceChargeBps: 1000, gstBps: 900, noServiceChargeNote: "", noGstNote: "", ...t } });
-    await assertFails(addDoc(collection(db(VENDOR), "venues"), bad({ serviceChargeBps: 500 })));
-    await assertFails(addDoc(collection(db(VENDOR), "venues"), bad({ gstBps: 800 })));
-    await assertFails(addDoc(collection(db(VENDOR), "venues"), bad({ gstBps: 9.5 })));
-    await assertSucceeds(addDoc(collection(db(VENDOR), "venues"), bad({ serviceChargeBps: 0, gstBps: 0 })));
+  it("venues no longer carry tax settings (they live on the business profile)", async () => {
+    await assertFails(addDoc(collection(db(VENDOR), "venues"), newVenue(VENDOR, { tax: { serviceChargeBps: 0, gstBps: 0, noServiceChargeNote: "", noGstNote: "" } })));
   });
 
   it("validates postal code and refuses unknown fields", async () => {

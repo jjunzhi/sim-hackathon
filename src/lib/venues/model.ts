@@ -46,7 +46,6 @@ export interface Venue {
   cultureTags: string[];
   wheelchairAccess: boolean;
   liftAccess: boolean;
-  tax: TaxSettings;
   coverPhoto: StoredPhoto | null;
 }
 
