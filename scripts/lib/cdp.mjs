@@ -74,7 +74,10 @@ export async function launch({ port = 9333 } = {}) {
     if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") {
       errors.push(m.params.args.map((a) => a.value ?? a.description).join(" "));
     }
-    if (m.method === "Runtime.exceptionThrown") errors.push(m.params.exceptionDetails.text);
+    if (m.method === "Runtime.exceptionThrown") {
+      const d = m.params.exceptionDetails;
+      errors.push([d.text, d.exception?.description ?? d.exception?.value, d.url && `${d.url}:${d.lineNumber}`].filter(Boolean).join(" "));
+    }
   });
   await send("Runtime.enable");
   await send("Page.enable");

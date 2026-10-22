@@ -12,6 +12,10 @@ import type { Estimate } from "@/lib/estimate/engine";
 import { TIER_LABELS } from "@/lib/estimate/build";
 import { formatBps, formatSGD } from "@/lib/money";
 import { usePlanEstimate } from "@/lib/plans/use-plan-estimate";
+import { sgDate } from "@/components/studio/resolved-estimates";
+import { useAuth } from "@/lib/auth/auth-provider";
+import { watchConfirmationsBy, watchCoupleLeads, type ConfirmationRow, type LeadRow } from "@/lib/data/leads";
+import { resolvePlan } from "@/lib/leads/resolve";
 import { themeLabel } from "@/lib/render/themes";
 
 export default function PrintPage() {
@@ -37,6 +41,19 @@ function PrintView() {
     getPlan(planId).then(setPlan);
   }, [planId]);
   const { venue, space, estimates } = usePlanEstimate(plan ?? null);
+  const auth = useAuth();
+  const uid = auth.status === "ready" ? auth.user.uid : null;
+  const [leads, setLeads] = useState<LeadRow[]>([]);
+  const [confs, setConfs] = useState<ConfirmationRow[]>([]);
+  useEffect(() => {
+    if (!uid) return;
+    const a = watchCoupleLeads(uid, setLeads);
+    const b = watchConfirmationsBy("coupleUid", uid, setConfs);
+    return () => {
+      a();
+      b();
+    };
+  }, [uid]);
 
   if (plan === null) {
     return (
@@ -53,6 +70,9 @@ function PrintView() {
     );
   }
   const printed = new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" });
+  // Confirmed parts print exactly as the vendor confirmed them, with their validity date.
+  const resolved = resolvePlan({ plan, planId: plan.id, live: estimates, leads, confirmations: confs, now: new Date() });
+  const allConfirmed = resolved.confirmedCount === resolved.vendors.length;
 
   return (
     <main className="print-doc mx-auto flex max-w-3xl flex-col gap-6 bg-surface px-4 py-8 text-ink sm:px-8">
@@ -67,7 +87,9 @@ function PrintView() {
       </div>
 
       <header className="flex flex-col gap-1 border-b border-line pb-4">
-        <p className="text-small font-semibold uppercase tracking-widest">Estimate · not a final quote</p>
+        <p className="text-small font-semibold uppercase tracking-widest">
+          {allConfirmed ? "Vendor confirmed" : resolved.confirmedCount ? "Partly vendor confirmed · Estimate" : "Estimate · not a final quote"}
+        </p>
         <h1 className="text-h1">{plan.name}</h1>
         <p>
           {venue.name}
@@ -81,12 +103,21 @@ function PrintView() {
 
       {estimates.unavailable.length > 0 && <p className="text-small">Note: {estimates.unavailable.length} item(s) are no longer offered and are not included.</p>}
 
-      {estimates.vendors.map((v) => (
+      {resolved.vendors.map((v) => (
         <section key={v.vendorUid} className="print-avoid-break flex flex-col gap-2">
           <h2 className="text-h3">
             {v.vendorName}
             {v.isVenue ? " (venue)" : ""}
           </h2>
+          <p className="text-small font-semibold">
+            {v.status.kind === "confirmed"
+              ? `Vendor Confirmed · Valid until ${sgDate(v.status.validUntilMs)}`
+              : v.status.kind === "expired"
+                ? `Estimate · the vendor's confirmation expired on ${sgDate(v.status.validUntilMs)}`
+                : v.status.kind === "changed"
+                  ? "Estimate · changed since the vendor confirmed"
+                  : "Estimate"}
+          </p>
           <table className="num w-full border-collapse text-small">
             <thead>
               <tr className="border-b border-line text-left">
@@ -128,7 +159,7 @@ function PrintView() {
                 </tr>
               )}
               <tr className="font-semibold">
-                <td className="py-2" colSpan={2}>Estimated total</td>
+                <td className="py-2" colSpan={2}>{v.status.kind === "confirmed" ? "Confirmed total" : "Estimated total"}</td>
                 <td className="py-2 text-right text-body">{formatSGD(v.estimate.totalCents)}</td>
               </tr>
             </tbody>
@@ -143,14 +174,22 @@ function PrintView() {
 
       <section className="print-avoid-break flex flex-col gap-1 border-t-2 border-ink pt-3">
         <p className="flex justify-between font-semibold">
-          <span>{estimates.vendors.length > 1 ? `Estimated total across ${estimates.vendors.length} vendors` : "Estimated total"}</span>
-          <span className="num text-h3">{formatSGD(estimates.combinedTotalCents)}</span>
+          <span>
+            {allConfirmed ? "Confirmed total" : "Estimated total"}
+            {resolved.vendors.length > 1 ? ` across ${resolved.vendors.length} vendors` : ""}
+          </span>
+          <span className="num text-h3">{formatSGD(resolved.combinedTotalCents)}</span>
         </p>
-        {estimates.combinedPerGuestCents !== null && <p className="num text-small">About {formatSGD(estimates.combinedPerGuestCents)} per guest</p>}
+        {resolved.combinedPerGuestCents !== null && <p className="num text-small">About {formatSGD(resolved.combinedPerGuestCents)} per guest</p>}
       </section>
 
       <footer className="flex flex-col gap-1 text-small">
-        <p>This is an estimate based on current prices, not a final quote. Each vendor confirms only its own estimate.</p>
+        <p>
+          {resolved.confirmedCount > 0
+            ? "Confirmed parts are fixed until the date shown. Anything marked Estimate uses current prices and is not a final quote."
+            : "This is an estimate based on current prices, not a final quote."}{" "}
+          Each vendor confirms only its own part.
+        </p>
         <p>Prices in Singapore dollars. Generated by WeddingVista.</p>
       </footer>
     </main>

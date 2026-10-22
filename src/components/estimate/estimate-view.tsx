@@ -59,13 +59,13 @@ function Row({ label, detail, cents, strong, tone }: { label: React.ReactNode; d
  * Itemised estimate. Every price carries the "Estimate" label until a vendor
  * confirms it (Phase 5). Never call this a final quote.
  */
-export function EstimateView({ estimate, title = "Estimate" }: { estimate: Estimate; title?: string }) {
+export function EstimateView({ estimate, title = "Estimate", badge }: { estimate: Estimate; title?: string; badge?: React.ReactNode }) {
   const e = estimate;
   return (
     <section aria-label={title} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-h3">{title}</h2>
-        <Badge tone="estimate">Estimate</Badge>
+        {badge ?? <Badge tone="estimate">Estimate</Badge>}
       </div>
       <p className="num text-small text-muted">
         {e.headcount} {e.headcount === 1 ? "guest" : "guests"} · {e.tables} {e.tables === 1 ? "table" : "tables"} of {e.seatsPerTable}
@@ -108,7 +108,7 @@ export function EstimateView({ estimate, title = "Estimate" }: { estimate: Estim
 
       <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl bg-subtle p-4">
         <div className="flex flex-col">
-          <span className="text-small text-muted">Estimated total</span>
+          <span className="text-small text-muted">{badge ? "Total" : "Estimated total"}</span>
           <span className="font-display text-h1 leading-none">
             <AnimatedNumber value={e.totalCents} format={money} />
           </span>
@@ -121,7 +121,7 @@ export function EstimateView({ estimate, title = "Estimate" }: { estimate: Estim
       </div>
       {/* Screen readers get one summary update instead of every animated digit. */}
       <p className="sr-only" aria-live="polite">
-        Estimated total {formatSGD(e.totalCents)}
+        {badge ? "Total" : "Estimated total"} {formatSGD(e.totalCents)}
       </p>
     </section>
   );

@@ -7,6 +7,7 @@ import { StorageImage } from "@/components/photos/storage-image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState, SkeletonList } from "@/components/ui/skeleton";
+import { watchVendorLeads, type LeadRow } from "@/lib/data/leads";
 import { watchVendorUsage } from "@/lib/data/renders";
 import { watchItems, watchPackages } from "@/lib/data/vendors";
 import { watchMyVenues, type WithId } from "@/lib/data/venues";
@@ -26,6 +27,7 @@ export default function VendorOverview() {
   const [packages, setPackages] = useState<WithId<InventoryPackage>[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+  const [leads, setLeads] = useState<LeadRow[] | null>(null);
 
   useEffect(() => {
     if (!uid) return;
@@ -35,6 +37,7 @@ export default function VendorOverview() {
       watchItems(uid, setItems, onErr),
       watchPackages(uid, setPackages, onErr),
       watchVendorUsage(uid, setUsage),
+      watchVendorLeads(uid, setLeads),
     ];
     return () => subs.forEach((u) => u());
   }, [uid]);
@@ -62,7 +65,7 @@ export default function VendorOverview() {
         </p>
       )}
 
-      <section aria-labelledby="inv-h" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <section aria-labelledby="inv-h" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <h2 id="inv-h" className="sr-only">
           Inventory
         </h2>
@@ -83,6 +86,16 @@ export default function VendorOverview() {
             <p className="text-small text-muted">Bundles of items at one price.</p>
             <Link href="/vendor/packages" className={textLink}>
               Manage packages <ArrowRight aria-hidden className="size-4" />
+            </Link>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="flex flex-col gap-2">
+            <p className="text-small text-muted">Estimate requests</p>
+            <p className="num font-display text-h2">{leads ? `${leads.filter((l) => l.status === "new").length} new` : "..."}</p>
+            <p className="num text-small text-muted">{leads ? `${leads.length} in total` : ""}</p>
+            <Link href="/vendor/leads" className={textLink}>
+              See leads <ArrowRight aria-hidden className="size-4" />
             </Link>
           </CardBody>
         </Card>

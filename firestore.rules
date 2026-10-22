@@ -24,6 +24,11 @@ service cloud.firestore {
         && get(userPath(request.auth.uid)).data.role == 'couple';
     }
 
+    // Family members viewing a share link sign in anonymously.
+    function isAnonymous() {
+      return request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
     function isInt(v, lo, hi) {
       return v is int && v >= lo && v <= hi;
     }
@@ -38,7 +43,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
 
-      allow create: if signedIn() && request.auth.uid == uid
+      // Anonymous (family voting) sessions can never become a couple or vendor.
+      allow create: if signedIn() && request.auth.uid == uid && !isAnonymous()
         && request.resource.data.keys().hasOnly(['role', 'consent', 'createdAt'])
         && request.resource.data.keys().hasAll(['role', 'consent', 'createdAt'])
         && request.resource.data.role in ['couple', 'vendor']
@@ -351,6 +357,139 @@ service cloud.firestore {
           && isInt(request.resource.data.plusOnes, 0, 10)
           && request.resource.data.updatedAt == request.time;
       }
+    }
+
+    // ---------- shares/{shareId}: family links ----------
+    // The id is 128 random bits: knowing it is the permission to view.
+    // Links can be fetched by id, never listed by others. Revoking clears the
+    // options, so a revoked link shows nothing but its status.
+    function validShareOption(o) {
+      return o is map
+        && o.keys().hasOnly(['planId', 'venueName', 'planName', 'renderKey', 'renderPath', 'themeId', 'demo', 'aspect', 'estimateTotalCents'])
+        && o.renderPath is string && o.renderPath.matches('renders/[0-9a-f]{64}[.]jpg')
+        && isInt(o.estimateTotalCents, 0, 100000000000);
+    }
+
+    match /shares/{shareId} {
+      function share() {
+        return get(/databases/$(database)/documents/shares/$(shareId)).data;
+      }
+
+      allow get: if signedIn();
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isCouple()
+        && shareId.size() >= 22
+        && request.resource.data.keys().hasOnly(['ownerUid', 'title', 'status', 'options', 'createdAt', 'updatedAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'active'
+        && isText(request.resource.data.title, 80)
+        && request.resource.data.options is list
+        && request.resource.data.options.size() >= 2
+        && request.resource.data.options.size() <= 3
+        && validShareOption(request.resource.data.options[0])
+        && validShareOption(request.resource.data.options[1])
+        && (request.resource.data.options.size() < 3 || validShareOption(request.resource.data.options[2]))
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // The only change allowed is revoking, which is final.
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'options', 'title', 'updatedAt'])
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.options.size() == 0
+        && request.resource.data.title == ''
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      // One vote per voter per link: the document id is the voter's uid and
+      // votes can never be changed or deleted by a client. No IP addresses.
+      match /votes/{voterId} {
+        allow read: if signedIn() && (request.auth.uid == voterId || share().ownerUid == request.auth.uid);
+        allow create: if signedIn() && request.auth.uid == voterId
+          && share().status == 'active'
+          && request.resource.data.keys().hasOnly(['optionIndex', 'name', 'note', 'createdAt'])
+          && request.resource.data.keys().hasAll(['optionIndex', 'name', 'note', 'createdAt'])
+          && isInt(request.resource.data.optionIndex, 0, share().options.size() - 1)
+          && isText(request.resource.data.name, 40)
+          && isText(request.resource.data.note, 280)
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        // Only the couple, when deleting their own link.
+        allow delete: if signedIn() && share().ownerUid == request.auth.uid;
+      }
+    }
+
+    // ---------- leads/{leadId}: a couple asks one vendor to confirm ----------
+    match /leads/{leadId} {
+      allow read: if signedIn() && (resource.data.coupleUid == request.auth.uid || resource.data.vendorUid == request.auth.uid);
+      allow create: if isCouple()
+        && request.resource.data.keys().hasOnly([
+            'coupleUid', 'vendorUid', 'venueOwnerUid', 'planId', 'venueId', 'venueName', 'vendorName',
+            'spaceId', 'spaceName', 'tierKey', 'headcount', 'selections', 'renders', 'contact',
+            'status', 'confirmationId', 'createdAt', 'updatedAt'])
+        && request.resource.data.coupleUid == request.auth.uid
+        && request.resource.data.vendorUid is string && request.resource.data.vendorUid != request.auth.uid
+        && exists(/databases/$(database)/documents/projects/$(request.resource.data.planId))
+        && get(/databases/$(database)/documents/projects/$(request.resource.data.planId)).data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'new'
+        && request.resource.data.confirmationId == null
+        && isInt(request.resource.data.headcount, 0, 7000)
+        && request.resource.data.selections is map && request.resource.data.selections.size() <= 60
+        && request.resource.data.renders is list && request.resource.data.renders.size() <= 6
+        && request.resource.data.contact is map
+        && request.resource.data.contact.keys().hasOnly(['name', 'reachAt', 'eventDate', 'message'])
+        && request.resource.data.contact.name is string && request.resource.data.contact.name.size() > 0
+        && isText(request.resource.data.contact.name, 80)
+        && request.resource.data.contact.reachAt is string && request.resource.data.contact.reachAt.size() > 0
+        && isText(request.resource.data.contact.reachAt, 120)
+        && isText(request.resource.data.contact.eventDate, 20)
+        && isText(request.resource.data.contact.message, 1000)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // The vendor may only decline, or mark confirmed alongside its confirmation.
+      allow update: if signedIn()
+        && resource.data.vendorUid == request.auth.uid
+        && resource.data.status == 'new'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmationId', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && (
+          (request.resource.data.status == 'declined' && request.resource.data.confirmationId == null)
+          || (request.resource.data.status == 'confirmed'
+              && request.resource.data.confirmationId == leadId
+              && existsAfter(/databases/$(database)/documents/confirmations/$(leadId)))
+        );
+      // A couple can withdraw a request that hasn't been confirmed.
+      allow delete: if signedIn() && resource.data.coupleUid == request.auth.uid && resource.data.status != 'confirmed';
+    }
+
+    // ---------- confirmations/{leadId}: immutable vendor-confirmed snapshot ----------
+    match /confirmations/{leadId} {
+      function lead() {
+        return get(/databases/$(database)/documents/leads/$(leadId)).data;
+      }
+
+      allow read: if signedIn() && (resource.data.vendorUid == request.auth.uid || resource.data.coupleUid == request.auth.uid);
+      allow create: if signedIn()
+        && lead().vendorUid == request.auth.uid
+        && lead().status == 'new'
+        && request.resource.data.keys().hasOnly([
+            'leadId', 'vendorUid', 'coupleUid', 'planId', 'vendorName', 'venueName', 'spaceName', 'tierKey',
+            'headcount', 'snapshot', 'engineVersion', 'confirmedBy', 'confirmedByName', 'note', 'confirmedAt', 'validUntil'])
+        && request.resource.data.leadId == leadId
+        && request.resource.data.vendorUid == request.auth.uid
+        && request.resource.data.confirmedBy == request.auth.uid
+        && request.resource.data.coupleUid == lead().coupleUid
+        && request.resource.data.planId == lead().planId
+        && request.resource.data.headcount == lead().headcount
+        && request.resource.data.snapshot is map
+        && isText(request.resource.data.note, 500)
+        && request.resource.data.confirmedAt == request.time
+        && request.resource.data.validUntil is timestamp
+        && request.resource.data.validUntil > request.time
+        && request.resource.data.validUntil <= request.time + duration.value(91, 'd')
+        && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.status == 'confirmed';
+      // Confirmed estimates never change. Only account deletion (Admin SDK) touches them.
+      allow update, delete: if false;
     }
 
     // ---------- renders (written only by the requestRender function) ----------

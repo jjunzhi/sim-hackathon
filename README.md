@@ -61,11 +61,28 @@ node scripts/e2e-phase2.mjs
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
 
+## Family links, voting and vendor confirmation (Phase 5)
+
+- **Family links** (`shares/{id}`): a couple puts 2 or 3 saved renders, from any of their plans, side by side under one question. The id is 128 random bits (22 characters, base64url), so a link can't be guessed; anyone with the link can open it. Each option shows its plan's estimate total at the moment the link was made, with the Estimate badge and the AI illustration note.
+- **Voting needs no account.** The page signs the visitor in anonymously (**Firebase Anonymous Auth must be enabled in the console** before launch; the emulator has it on). An anonymous session can only read a link and cast one vote; it can't create a profile, a plan or a render. Votes are keyed by the voter's uid and are create-only, so one browser identity votes once and can't change it. Clearing site data gives a new identity, so "one vote per person" is best effort, and the couple can vote on their own link. Voters see only a thank-you and their own choice.
+- **Stored per vote:** the option, an optional name or relationship (40 characters) and an optional note (280). No IP addresses, no contact details.
+- **Results** are for the couple only: percentages by the largest-remainder method, a leader, and "most agree" when one option has 70% or more.
+- **Turning a link off** keeps the document (so the page can say "no longer active") but empties its options and title. **Deleting** a link deletes its votes too. A deleted couple's links read "This project has been removed".
+- **Confirmed estimates** (`leads/{id}` and `confirmations/{id}`): from the Estimate step, a couple asks one vendor at a time to confirm its own part ("Request a confirmed estimate"), typing a name, an email or phone, an optional date and message, and ticking a consent box. The vendor sees the guests, room, its own chosen items (never another vendor's), the saved renders and those details, and confirms or declines. Confirming freezes the engine's estimate as a snapshot, valid until a date the vendor picks (14 days by default, 1 to 90). The rules make confirmations write-once and check that they match the lead; the vendor's browser does the pricing with the shared engine (`engineVersion` is recorded).
+- **What the couple sees:** the confirmed part carries "Vendor Confirmed · Valid until …" and keeps the confirmed lines and totals even when the vendor changes prices later. It drops back to an Estimate when the date passes or when the couple changes that part of the plan (guests, room, tier or that vendor's items). The print view, the plan cards and the vendor's leads table all use the same resolution.
+- **Deletion cascade:** a couple's links and all their votes go with the couple, and so do unconfirmed leads. Confirmed leads follow **option B, pending PDPA review before launch**: the vendor keeps its confirmation snapshot (prices and items) but the couple's contact details, renders and plan link are removed, and the lead is marked `anonymised`. A vendor's leads and confirmations are deleted with the vendor.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running; it drives two browsers, one for the couple or vendor and one for a family member with no account):
+
+```bash
+node scripts/e2e-phase5.mjs
+```
+
 ## Couple journey (Phase 4)
 
 - **Browsing needs no account.** Rendering and saving a plan need a couple account. A plan made before signing up survives the sign-up step. It's kept in this tab's `sessionStorage` until saved, and holds no personal data.
 - **Catalog filters:** guest count (one room must fit), wheelchair access, lift access, style and culture. The guest range and "from" price come from `capacitySummary`. The `venueCapacitySummary` Firestore trigger (asia-southeast1) writes it whenever a space changes, and vendors can't edit it.
-- **Studio steps:** Venue (room, Peak/Off-Peak, guests), Style (theme, items from the venue and from decorators who work there), Render, Estimate, and Share (coming in Phase 5).
+- **Studio steps:** Venue (room, Peak/Off-Peak, guests), Style (theme, items from the venue and from decorators who work there), Render, Estimate, and Share (family links, Phase 5).
   - The guest slider runs from half the room's minimum to 30% above its maximum, with warnings either side.
   - There's one estimate per vendor, plus the total across vendors.
 - **Plans** (`projects/{id}`) are owner-only, up to 10 per couple, and autosave. They hold up to 6 saved renders.

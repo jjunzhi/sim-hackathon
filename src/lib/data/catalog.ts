@@ -28,7 +28,8 @@ export async function getPublishedVenue(venueId: string): Promise<CatalogVenue |
   }
 }
 
-async function getVendorCatalog(uid: string): Promise<VendorCatalog | null> {
+/** A vendor's profile and active items/packages (public once published; always for the owner). */
+export async function getVendorCatalog(uid: string): Promise<VendorCatalog | null> {
   const { db } = getFirebase();
   try {
     const profile = await getDoc(doc(db, "vendors", uid));

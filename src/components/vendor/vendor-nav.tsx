@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Calculator, Home, Package, Sparkles } from "lucide-react";
+import { Building2, Calculator, Home, Inbox, Package, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -13,6 +13,7 @@ export function VendorNav() {
   const pathname = usePathname();
   const links = [
     { href: "/vendor", label: "Overview", icon: Home, exact: true },
+    { href: "/vendor/leads", label: "Leads", icon: Inbox },
     { href: "/vendor/business", label: "Business", icon: Building2 },
     { href: "/vendor/inventory", label: "Inventory", icon: Sparkles },
     { href: "/vendor/packages", label: "Packages", icon: Package },

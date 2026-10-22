@@ -154,6 +154,53 @@ describe("deleteAccount", () => {
     expect(await docExists(`guestLists/${other.uid}/parties/g9`)).toBe(true);
   });
 
+  it("couple: links and votes go; unconfirmed leads go; confirmed leads keep the snapshot without contact or plan (option B)", async () => {
+    const me = await signUp(`couple-l-${Date.now()}@example.test`);
+    const other = await signUp(`couple-o-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "couple");
+    const share = (ownerUid: string) => ({ ownerUid, title: "x", status: "active", options: [], createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, "shares/mineShareIdAAAAAAAAAAA", share(me.uid));
+    await seed(env, "shares/mineShareIdAAAAAAAAAAA/votes/anon1", { optionIndex: 0, name: "", note: "", createdAt: fixedTime });
+    await seed(env, "shares/theirShareIdBBBBBBBBBB", share(other.uid));
+    const lead = (status: string) => ({
+      coupleUid: me.uid, vendorUid: "vendor-x", venueOwnerUid: "vendor-x", planId: "p1", venueId: "v", venueName: "V", vendorName: "X",
+      spaceId: "s", spaceName: "S", tierKey: null, headcount: 100, selections: {}, renders: [{ key: "k", path: "renders/k.jpg", themeId: "chinese", aspect: "4 / 3" }],
+      contact: { name: "Sam", reachAt: "sam@example.test", eventDate: "", message: "Hi" }, status, confirmationId: status === "confirmed" ? "Lc" : null,
+      createdAt: fixedTime, updatedAt: fixedTime,
+    });
+    await seed(env, "leads/Ln", lead("new"));
+    await seed(env, "leads/Lc", lead("confirmed"));
+    await seed(env, "confirmations/Lc", { leadId: "Lc", vendorUid: "vendor-x", coupleUid: me.uid, planId: "p1", snapshot: { totalCents: 123 }, confirmedAt: fixedTime, validUntil: fixedTime });
+
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+
+    expect(await docExists("shares/mineShareIdAAAAAAAAAAA")).toBe(false);
+    expect(await docExists("shares/mineShareIdAAAAAAAAAAA/votes/anon1")).toBe(false);
+    expect(await docExists("shares/theirShareIdBBBBBBBBBB")).toBe(true);
+    expect(await docExists("leads/Ln")).toBe(false);
+
+    let kept: Record<string, unknown> = {};
+    let conf: Record<string, unknown> = {};
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      kept = (await getDoc(doc(ctx.firestore(), "leads/Lc"))).data() ?? {};
+      conf = (await getDoc(doc(ctx.firestore(), "confirmations/Lc"))).data() ?? {};
+    });
+    expect(kept).toMatchObject({ status: "confirmed", contact: null, coupleUid: null, planId: null, renders: [], anonymised: true });
+    expect(conf).toMatchObject({ coupleUid: null, planId: null, snapshot: { totalCents: 123 } });
+  });
+
+  it("vendor: its leads and the confirmations it gave are deleted", async () => {
+    const me = await signUp(`vendor-l-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "vendor");
+    await seed(env, "leads/Lv", { vendorUid: me.uid, coupleUid: "c1", status: "confirmed", createdAt: fixedTime });
+    await seed(env, "confirmations/Lv", { vendorUid: me.uid, coupleUid: "c1", snapshot: {}, confirmedAt: fixedTime });
+    await seed(env, "leads/Lother", { vendorUid: "someone-else", coupleUid: "c1", status: "new", createdAt: fixedTime });
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+    expect(await docExists("leads/Lv")).toBe(false);
+    expect(await docExists("confirmations/Lv")).toBe(false);
+    expect(await docExists("leads/Lother")).toBe(true);
+  });
+
   it("works for an account that never finished sign-up (no profile)", async () => {
     const me = await signUp(`half-${Date.now()}@example.test`);
     const res = await callDelete(me.idToken);

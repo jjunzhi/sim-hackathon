@@ -193,6 +193,16 @@ describe("requestRender access checks", () => {
     expect(((await res.json()) as CallResult).error?.status).toBe("UNAUTHENTICATED");
   });
 
+  it("anonymous family sessions can't render", async () => {
+    const res = await fetch(`${AUTH}/accounts:signUp?key=fake-api-key`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ returnSecureToken: true }),
+    });
+    const { idToken } = (await res.json()) as { idToken: string };
+    expect((await render(idToken, req("peranakan", ["arch"]))).error?.status).toBe("PERMISSION_DENIED");
+  });
+
   it("couples can't render a draft venue; its owner can preview it", async () => {
     const c = await render(couple.idToken, req("peranakan", ["arch"], { venueId: "draft" }));
     expect(c.error?.status).toBe("PERMISSION_DENIED");

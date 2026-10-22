@@ -68,6 +68,8 @@ export const requestRender = onCall(
   { enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 180, memory: "1GiB" },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
+    // Family members voting on a link are anonymous: they can't spend render allowances.
+    if (request.auth.token.firebase?.sign_in_provider === "anonymous") throw new HttpsError("permission-denied", "Please create an account to render.");
     const req = parseRequest(request.data);
     const raw = (geminiApiKey.value() ?? "").trim();
     const apiKey = raw && !["demo", "none"].includes(raw.toLowerCase()) ? raw : null;

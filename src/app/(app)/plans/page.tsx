@@ -6,6 +6,7 @@ import { LayoutList, Pencil, Printer, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { RequireAuth } from "@/components/auth/require-auth";
+import { FamilyLinks } from "@/components/sharing/family-links";
 import { StorageImage } from "@/components/photos/storage-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,9 @@ import { Modal } from "@/components/ui/modal";
 import { EmptyState, SkeletonList } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { watchConfirmationsBy, watchCoupleLeads, type ConfirmationRow, type LeadRow } from "@/lib/data/leads";
 import { deletePlan, updatePlan, watchMyPlans, type PlanRow } from "@/lib/data/plans";
+import { resolvePlan } from "@/lib/leads/resolve";
 import { formatSGD } from "@/lib/money";
 import { revealContainer, revealItem } from "@/lib/motion";
 import { PLAN_LIMITS } from "@/lib/plans/model";
@@ -35,6 +38,8 @@ function Plans() {
   const auth = useAuth();
   const uid = auth.status === "ready" ? auth.user.uid : null;
   const [plans, setPlans] = useState<PlanRow[] | null>(null);
+  const [leads, setLeads] = useState<LeadRow[]>([]);
+  const [confs, setConfs] = useState<ConfirmationRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<PlanRow | null>(null);
   const [removing, setRemoving] = useState<PlanRow | null>(null);
@@ -43,7 +48,12 @@ function Plans() {
 
   useEffect(() => {
     if (!uid) return;
-    return watchMyPlans(uid, setPlans, () => setError("We couldn't load your plans. Please refresh the page."));
+    const subs = [
+      watchMyPlans(uid, setPlans, () => setError("We couldn't load your plans. Please refresh the page.")),
+      watchCoupleLeads(uid, setLeads),
+      watchConfirmationsBy("coupleUid", uid, setConfs),
+    ];
+    return () => subs.forEach((u) => u());
   }, [uid]);
 
   return (
@@ -76,6 +86,8 @@ function Plans() {
             <PlanCard
               key={p.id}
               plan={p}
+              leads={leads}
+              confirmations={confs}
               onRename={() => {
                 setName(p.name);
                 setRenaming(p);
@@ -84,6 +96,12 @@ function Plans() {
             />
           ))}
         </motion.ul>
+      )}
+
+      {uid && (
+        <section className="border-t border-line pt-8">
+          <FamilyLinks uid={uid} />
+        </section>
       )}
 
       <Modal
@@ -142,8 +160,22 @@ function Plans() {
   );
 }
 
-function PlanCard({ plan, onRename, onRemove }: { plan: PlanRow; onRename: () => void; onRemove: () => void }) {
+function PlanCard({
+  plan,
+  leads,
+  confirmations,
+  onRename,
+  onRemove,
+}: {
+  plan: PlanRow;
+  leads: LeadRow[];
+  confirmations: ConfirmationRow[];
+  onRename: () => void;
+  onRemove: () => void;
+}) {
   const { venue, space, estimates, loading } = usePlanEstimate(plan);
+  // Confirmed parts count at the price the vendor confirmed, as in the Studio and print view.
+  const resolved = estimates ? resolvePlan({ plan, planId: plan.id, live: estimates, leads, confirmations, now: new Date() }) : null;
   const thumb = plan.savedRenders[plan.savedRenders.length - 1];
   return (
     <motion.li variants={revealItem}>
@@ -167,10 +199,21 @@ function PlanCard({ plan, onRename, onRemove }: { plan: PlanRow; onRename: () =>
           <p className="num text-small">
             {plan.headcount} guests · {themeLabel(plan.themeId)} · {plan.savedRenders.length} saved {plan.savedRenders.length === 1 ? "render" : "renders"}
           </p>
-          {estimates && (
+          {resolved && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="num font-display text-h3">{formatSGD(estimates.combinedTotalCents)}</span>
-              <Badge tone="estimate">Estimate</Badge>
+              <span className="num font-display text-h3">{formatSGD(resolved.combinedTotalCents)}</span>
+              {resolved.confirmedCount > 0 && resolved.confirmedCount === resolved.vendors.length ? (
+                <Badge tone="confirmed">Vendor Confirmed</Badge>
+              ) : (
+                <>
+                  <Badge tone="estimate">Estimate</Badge>
+                  {resolved.confirmedCount > 0 && (
+                    <span className="num text-small text-muted">
+                      {resolved.confirmedCount} of {resolved.vendors.length} vendors confirmed
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           )}
           <div className="mt-auto flex flex-wrap gap-2 pt-2">

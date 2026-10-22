@@ -8,9 +8,12 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { StorageImage } from "@/components/photos/storage-image";
 import { RenderPanel } from "@/components/render/render-panel";
+import { FamilyLinks } from "@/components/sharing/family-links";
 import { CapacityStatus } from "@/components/studio/capacity-status";
 import { ItemPicker } from "@/components/studio/item-picker";
-import { PlanEstimatesView } from "@/components/studio/plan-estimates";
+import { ResolvedEstimates } from "@/components/studio/resolved-estimates";
+import { resolvePlan } from "@/lib/leads/resolve";
+import { useCoupleConfirmations } from "@/lib/leads/use-couple-confirmations";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -233,6 +236,14 @@ function Studio() {
     }
     return out;
   }, [plan, catalogs]);
+  const saved = !!planId && loadedPlanId === planId;
+  // Confirmed parts count at the price the vendor confirmed, in the summary bar and the Estimate step alike.
+  const coupleUid = canSave && auth.status === "ready" ? auth.user.uid : null;
+  const { leads, confirmations } = useCoupleConfirmations(coupleUid);
+  const resolved = useMemo(
+    () => (estimates && plan ? resolvePlan({ plan, planId: saved ? planId : "", live: estimates, leads: saved ? leads : [], confirmations, now: new Date() }) : null),
+    [estimates, plan, planId, saved, leads, confirmations],
+  );
 
   if (venue === null) {
     return (
@@ -258,7 +269,6 @@ function Studio() {
   const range = space ? { min: space.capacityMin, max: space.capacityMax } : null;
   const slider = range ? sliderRange(range) : { min: 1, max: 500 };
   const keys = space ? tierKeys(space) : [];
-  const saved = !!planId && loadedPlanId === planId;
   const savedRender = (key: string) => plan.savedRenders.some((r) => r.key === key);
 
   return (
@@ -298,16 +308,16 @@ function Studio() {
 
         <JourneyStepper steps={STEPS} current={stepIndex} onStepChange={goTo} allowForward label="Planning steps" />
 
-        {estimates && (
+        {resolved && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-subtle px-4 py-3">
             <span className="num text-small">
               {plan.headcount} guests{space ? ` · ${space.name}` : ""}
               {plan.tierKey && TIER_LABELS[plan.tierKey] ? ` · ${TIER_LABELS[plan.tierKey]}` : ""}
             </span>
             <span className="flex items-baseline gap-2">
-              <span className="text-small text-muted">Estimated total</span>
+              <span className="text-small text-muted">{resolved.confirmedCount > 0 && resolved.confirmedCount === resolved.vendors.length ? "Confirmed total" : "Estimated total"}</span>
               <span className="font-display text-h3">
-                <AnimatedNumber value={estimates.combinedTotalCents} format={money} />
+                <AnimatedNumber value={resolved.combinedTotalCents} format={money} />
               </span>
             </span>
           </div>
@@ -483,7 +493,20 @@ function Studio() {
             {stepIndex === 3 && (
               <Card>
                 <CardBody className="flex flex-col gap-6">
-                  {estimates ? <PlanEstimatesView result={estimates} /> : <SkeletonList rows={2} label="Working out your estimate" />}
+                  {estimates ? (
+                    <ResolvedEstimates
+                      live={estimates}
+                      plan={plan}
+                      planId={saved ? planId : null}
+                      coupleUid={coupleUid}
+                      venue={venue}
+                      space={space}
+                      leads={leads}
+                      confirmations={confirmations}
+                    />
+                  ) : (
+                    <SkeletonList rows={2} label="Working out your estimate" />
+                  )}
                   {saved ? (
                     <Link
                       href={`/plans/${planId}/print`}
@@ -501,13 +524,19 @@ function Studio() {
 
             {stepIndex === 4 && (
               <Card>
-                <CardBody className="flex flex-col items-start gap-3">
-                  <Share2 aria-hidden className="size-6 text-gold" />
-                  <h3 className="text-h3">Share with family: coming soon</h3>
-                  <p className="max-w-xl text-muted">
-                    Soon you&apos;ll be able to send family a private link to compare two or three saved renders and vote for a favourite.
-                  </p>
-                  <Button disabled>Create a family link</Button>
+                <CardBody>
+                  {canSave && auth.status === "ready" ? (
+                    <FamilyLinks uid={auth.user.uid} />
+                  ) : (
+                    <div className="flex flex-col items-start gap-3">
+                      <Share2 aria-hidden className="size-6 text-gold" />
+                      <h3 className="text-h3">Share with family</h3>
+                      <p className="max-w-xl text-muted">Save your plan and a couple of renders, then send family a private link to vote for a favourite.</p>
+                      <Button variant="primary" onClick={savePlan}>
+                        Save your plan
+                      </Button>
+                    </div>
+                  )}
                 </CardBody>
               </Card>
             )}

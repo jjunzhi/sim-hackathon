@@ -62,7 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubProfile: (() => void) | undefined;
     const unsubAuth = onAuthStateChanged(services.auth, (user) => {
       unsubProfile?.();
-      if (!user) {
+      // An anonymous session only exists to vote on a family link; to the rest of the app it's signed out.
+      if (!user || user.isAnonymous) {
         setState({ status: "signed-out" });
         return;
       }
