@@ -12,6 +12,7 @@ import { handleAssistantRequest, parseAssistantRequest } from "./assistant/assis
 import { handleRenderRequest, parseRequest } from "./render/request-render.js";
 
 export { venueCapacitySummary } from "./venues/trigger.js";
+export { planDecisionsCleanup } from "./assistant/cleanup.js";
 export {
   createCheckoutSession,
   createPortalSession,

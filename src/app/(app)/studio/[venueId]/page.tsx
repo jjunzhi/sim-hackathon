@@ -11,7 +11,9 @@ import { RenderPanel } from "@/components/render/render-panel";
 import { FamilyLinks } from "@/components/sharing/family-links";
 import { CapacityStatus } from "@/components/studio/capacity-status";
 import { ItemPicker } from "@/components/studio/item-picker";
+import { AriaAlerts } from "@/components/studio/aria-alerts";
 import { PlanAssistant } from "@/components/studio/plan-assistant";
+import { detectAlerts } from "@/lib/assistant/alerts";
 import type { ChatMessage } from "@/lib/assistant/client";
 import { ResolvedEstimates } from "@/components/studio/resolved-estimates";
 import { resolvePlan } from "@/lib/leads/resolve";
@@ -31,6 +33,7 @@ import { clampHeadcount, sliderRange } from "@/lib/capacity";
 import { cn } from "@/lib/cn";
 import { getPublishedVenue, getVendorCatalog, loadVenueCatalogs } from "@/lib/data/catalog";
 import type { RenderResult } from "@/lib/data/renders";
+import { watchParties } from "@/lib/data/guests";
 import { clearStashedDraft, countMyPlans, createPlan, getPlan, peekStashedDraft, stashDraft, updatePlan } from "@/lib/data/plans";
 import { watchBlockedDates, type BlockedDate } from "@/lib/data/vendors";
 import { watchSpaces, type WithId } from "@/lib/data/venues";
@@ -41,6 +44,7 @@ import { stepVariants } from "@/lib/motion";
 import { buildPlanEstimates, type VendorCatalog } from "@/lib/plans/estimates";
 import { parseSelectionKey, PLAN_LIMITS, type PlanDraft } from "@/lib/plans/model";
 import { THEME_OPTIONS, themeDescriptionT, themeLabelT } from "@/lib/render/themes";
+import { partySeats } from "@/lib/guests/helper";
 import type { CatalogVenue } from "@/lib/venues/catalog";
 import type { Space } from "@/lib/venues/model";
 
@@ -70,6 +74,9 @@ function defaultDraft(venue: CatalogVenue, spaces: WithId<Space>[], name: string
     selections: {},
     savedRenders: [],
     weddingDate: null,
+    budgetCents: null,
+    brief: null,
+    timeline: [],
   };
 }
 
@@ -97,6 +104,10 @@ function Studio() {
   // The planning assistant's conversation lives only in this page.
   const [assistantOpen, setAssistantOpen] = useState(() => params.get("assistant") === "1");
   const [chat, setChat] = useState<ChatMessage[]>([]);
+  // Seats on the couple's guest list, for Aria's capacity check (counts only).
+  const [guestSeats, setGuestSeats] = useState<number | null>(null);
+  // Other vendors in the plan who blocked dates: uid -> dates.
+  const [vendorBlocked, setVendorBlocked] = useState<Record<string, string[]>>({});
   const [direction, setDirection] = useState(1);
   const [lastRender, setLastRender] = useState<RenderResult | null>(null);
   const lastSaved = useRef<string>("");
@@ -158,6 +169,9 @@ function Studio() {
         selections: p.selections,
         savedRenders: p.savedRenders,
         weddingDate: p.weddingDate ?? null,
+        budgetCents: p.budgetCents ?? null,
+        brief: p.brief ?? null,
+        timeline: p.timeline ?? [],
       };
       lastSaved.current = JSON.stringify(d);
       setDraft(d);
@@ -170,6 +184,31 @@ function Studio() {
 
   const plan: PlanDraft | null = draft ?? (venue && spaces ? defaultDraft(venue, spaces, t("studio.defaultPlanName", { venue: venue.name })) : null);
   const space = spaces?.find((s) => s.id === plan?.spaceId) ?? null;
+
+  // Guest list seat counts (no labels) for Aria's capacity check.
+  const guestUid = auth.status === "ready" && auth.profile.role === "couple" ? auth.user.uid : null;
+  useEffect(() => {
+    if (!guestUid) return;
+    return watchParties(
+      guestUid,
+      (rows) => setGuestSeats(rows.length ? rows.reduce((n, p) => n + partySeats(p), 0) : null),
+      () => setGuestSeats(null),
+    );
+  }, [guestUid]);
+
+  // Blocked dates of the plan's other vendors (decorators), so Aria can warn about the date.
+  const otherVendors = plan && venueOwner ? [...new Set(Object.keys(plan.selections).map((k) => parseSelectionKey(k)?.vendorUid))].filter((u): u is string => !!u && u !== venueOwner).sort().slice(0, 5).join(",") : "";
+  useEffect(() => {
+    if (!otherVendors) return;
+    const unsubs = otherVendors.split(",").map((uid) =>
+      watchBlockedDates(
+        uid,
+        (rows) => setVendorBlocked((prev) => ({ ...prev, [uid]: rows.map((r) => r.date) })),
+        () => setVendorBlocked((prev) => ({ ...prev, [uid]: [] })),
+      ),
+    );
+    return () => unsubs.forEach((u) => u());
+  }, [otherVendors]);
 
   function update(patch: Partial<PlanDraft>) {
     if (!plan) return;
@@ -277,6 +316,24 @@ function Studio() {
     [estimates, plan, planId, saved, leads, confirmations],
   );
 
+  const ariaAlerts = plan && resolved
+    ? detectAlerts({
+        budgetCents: plan.budgetCents ?? null,
+        estimateCents: resolved.combinedTotalCents,
+        headcount: plan.headcount,
+        capacityMax: space?.capacityMax ?? null,
+        guestSeats,
+        unavailableVendors: plan.weddingDate
+          ? [
+              ...(blocked.some((b) => b.date === plan.weddingDate) && venue ? [venue.name] : []),
+              ...Object.entries(vendorBlocked)
+                .filter(([uid, dates]) => otherVendors.split(",").includes(uid) && dates.includes(plan.weddingDate!))
+                .map(([uid]) => catalogs?.find((c) => c.uid === uid)?.profile.businessName ?? uid),
+            ]
+          : [],
+      })
+    : [];
+
   if (venue === null) {
     return (
       <>
@@ -353,7 +410,9 @@ function Studio() {
             spaces={spaces}
             catalogs={catalogs}
             plan={plan}
+            planId={saved ? planId : null}
             canUse={saved && canSave}
+            alerts={ariaAlerts}
             onSave={() => {
               setAssistantOpen(false);
               savePlan();
@@ -366,8 +425,15 @@ function Studio() {
                 themeId: next.themeId,
                 weddingDate: next.weddingDate ?? null,
                 selections: next.selections,
+                budgetCents: next.budgetCents ?? null,
+                brief: next.brief ?? null,
+                timeline: next.timeline ?? [],
               })
             }
+            onOpenRequest={() => {
+              setAssistantOpen(false);
+              goTo(3);
+            }}
             messages={chat}
             setMessages={setChat}
           />
@@ -387,6 +453,14 @@ function Studio() {
               </span>
             </span>
           </div>
+        )}
+
+        {saved && canSave && (
+          <AriaAlerts
+            alerts={ariaAlerts}
+            openLabel={t("assistant.open")}
+            onAsk={() => setAssistantOpen(true)}
+          />
         )}
 
         <AnimatePresence mode="wait" custom={direction} initial={false}>
