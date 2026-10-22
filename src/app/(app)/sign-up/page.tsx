@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { authErrorMessage, safeNext } from "@/lib/auth/errors";
 import { homeFor } from "@/lib/auth/routes";
+import { stashInvite } from "@/lib/data/billing";
 import { createProfile, type Role } from "@/lib/data/users";
 import { getFirebase } from "@/lib/firebase/client";
+import { useT } from "@/lib/i18n/provider";
 
 export default function SignUpPage() {
   return (
@@ -24,6 +26,7 @@ export default function SignUpPage() {
 }
 
 function SignUp() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const auth = useAuth();
@@ -35,6 +38,12 @@ function SignUp() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<"email" | "google" | null>(null);
 
+  // A pilot invite link (?role=vendor&invite=...) is redeemed once the vendor area opens.
+  const invite = params.get("invite");
+  useEffect(() => {
+    if (invite) stashInvite(invite);
+  }, [invite]);
+
   // Already signed in with a profile: go home.
   useEffect(() => {
     if (auth.status === "ready" && !busy) router.replace(safeNext(params.get("next")) ?? homeFor(auth.profile.role));
@@ -42,8 +51,8 @@ function SignUp() {
 
   function checkChoices(): boolean {
     const e: Record<string, string> = {};
-    if (!role) e.role = "Choose how you'll use WeddingVista.";
-    if (!consent) e.consent = "Please agree before creating your account.";
+    if (!role) e.role = t("auth.signUp.chooseRole");
+    if (!consent) e.consent = t("auth.signUp.agreeFirst");
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -56,8 +65,8 @@ function SignUp() {
     ev.preventDefault();
     const ok = checkChoices();
     const e: Record<string, string> = {};
-    if (!/^\S+@\S+\.\S+$/.test(email)) e.email = "Enter an email address like name@example.com.";
-    if (password.length < 8) e.password = "Use at least 8 characters.";
+    if (!/^\S+@\S+\.\S+$/.test(email)) e.email = t("auth.error.invalidEmail");
+    if (password.length < 8) e.password = t("auth.signUp.passwordShort");
     if (!ok || Object.keys(e).length) {
       setErrors((prev) => ({ ...prev, ...e }));
       return;
@@ -68,7 +77,7 @@ function SignUp() {
       await createProfile(cred.user.uid, role!);
       done(role!);
     } catch (err) {
-      setErrors({ form: authErrorMessage(err) ?? "" });
+      setErrors({ form: authErrorMessage(err, t) ?? "" });
       setBusy(null);
     }
   }
@@ -88,7 +97,7 @@ function SignUp() {
       await createProfile(cred.user.uid, role!);
       done(role!);
     } catch (err) {
-      const msg = authErrorMessage(err);
+      const msg = authErrorMessage(err, t);
       setErrors(msg ? { form: msg } : {});
       setBusy(null);
     }
@@ -96,13 +105,13 @@ function SignUp() {
 
   return (
     <AuthLayout
-      title="Create your account"
-      intro="Start planning, or list your venue."
+      title={t("auth.signUp.title")}
+      intro={t("auth.signUp.intro")}
       footer={
         <>
-          Already have an account?{" "}
+          {t("auth.signUp.haveAccount")}{" "}
           <Link href="/sign-in" className="font-semibold text-accent-text underline underline-offset-4">
-            Sign in
+            {t("nav.signIn")}
           </Link>
         </>
       }
@@ -112,15 +121,15 @@ function SignUp() {
         <ConsentField checked={consent} onChange={setConsent} error={errors.consent} />
 
         <Button variant="secondary" size="lg" onClick={onGoogle} loading={busy === "google"} disabled={busy !== null} icon={<GoogleIcon />}>
-          Continue with Google
+          {t("auth.continueWithGoogle")}
         </Button>
-        <Divider label="or use email" />
-        <Input label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
+        <Divider label={t("auth.orUseEmail")} />
+        <Input label={t("auth.email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
         <Input
-          label="Password"
+          label={t("auth.password")}
           type="password"
           autoComplete="new-password"
-          hint="At least 8 characters."
+          hint={t("auth.signUp.passwordHint")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
@@ -131,7 +140,7 @@ function SignUp() {
           </p>
         )}
         <Button type="submit" variant="primary" size="lg" loading={busy === "email"} disabled={busy !== null}>
-          Create account
+          {t("auth.signUp.submit")}
         </Button>
       </form>
     </AuthLayout>

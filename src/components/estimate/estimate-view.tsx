@@ -7,14 +7,29 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import type { Estimate, PreTaxLine } from "@/lib/estimate/engine";
+import { useT } from "@/lib/i18n/provider";
 import { formatBps, formatSGD } from "@/lib/money";
 
 const money = (c: number) => formatSGD(c);
+type T = ReturnType<typeof useT>;
 
-function working(line: PreTaxLine): string | null {
+function working(t: T, line: PreTaxLine): string | null {
   if (line.kind === "rental") return null;
-  const unit = line.unit === "piece" ? (line.count === 1 ? "piece" : "pieces") : line.unit === "table" ? (line.count === 1 ? "table" : "tables") : line.count === 1 ? "guest" : "guests";
-  return `${line.count} ${unit} × ${formatSGD(line.unitPriceCents)}`;
+  const key = line.unit === "piece" ? "estimate.pieces" : line.unit === "table" ? "estimate.tables" : "estimate.guests";
+  return t(key, { count: line.count, price: formatSGD(line.unitPriceCents) });
+}
+
+/** "about {amount} per guest" with the amount animated: the template is split around its placeholder. */
+export function PerGuest({ cents, className }: { cents: number; className?: string }) {
+  const t = useT();
+  const [before, after] = t("money.perGuest").split("{amount}");
+  return (
+    <span className={className ?? "num text-small text-muted"}>
+      {before}
+      <AnimatedNumber value={cents} format={money} />
+      {after}
+    </span>
+  );
 }
 
 /** Amount cell that briefly highlights when its value changes (opacity only). */
@@ -59,43 +74,46 @@ function Row({ label, detail, cents, strong, tone }: { label: React.ReactNode; d
  * Itemised estimate. Every price carries the "Estimate" label until a vendor
  * confirms it (Phase 5). Never call this a final quote.
  */
-export function EstimateView({ estimate, title = "Estimate" }: { estimate: Estimate; title?: string }) {
+export function EstimateView({ estimate, title, badge }: { estimate: Estimate; title?: string; badge?: React.ReactNode }) {
+  const t = useT();
   const e = estimate;
+  const heading = title ?? t("estimate.title");
+  const totalLabel = badge ? t("estimate.total") : t("estimate.estimatedTotal");
   return (
-    <section aria-label={title} className="flex flex-col gap-4">
+    <section aria-label={heading} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-h3">{title}</h2>
-        <Badge tone="estimate">Estimate</Badge>
+        <h2 className="text-h3">{heading}</h2>
+        {badge ?? <Badge tone="estimate">{t("badge.estimate")}</Badge>}
       </div>
       <p className="num text-small text-muted">
-        {e.headcount} {e.headcount === 1 ? "guest" : "guests"} · {e.tables} {e.tables === 1 ? "table" : "tables"} of {e.seatsPerTable}
+        {t("estimate.header", { guests: t("guests.count", { count: e.headcount }), tables: t("estimate.tablesOf", { count: e.tables, seats: e.seatsPerTable }) })}
       </p>
 
       <dl className="divide-y divide-line">
         {e.lines.length === 0 && (
           <div className="py-3 text-muted">
-            <dt>Nothing selected yet.</dt>
+            <dt>{t("estimate.nothingSelected")}</dt>
           </div>
         )}
         {e.lines.map((l) => (
-          <Row key={l.kind === "rental" ? "rental" : `${l.kind}:${l.id}`} label={l.label} detail={working(l)} cents={l.amountCents} />
+          <Row key={l.kind === "rental" ? "rental" : `${l.kind}:${l.id}`} label={l.label} detail={working(t, l)} cents={l.amountCents} />
         ))}
-        <Row label="Subtotal" cents={e.subtotalCents} strong />
+        <Row label={t("estimate.subtotal")} cents={e.subtotalCents} strong />
         {e.minimumSpendShortfall && (
           <Row
             tone="warning"
             label={
               <span className="inline-flex items-center gap-1.5">
                 <CircleAlert aria-hidden className="size-4 text-warning-icon" />
-                Minimum spend shortfall
+                {t("estimate.minimumSpendShortfall")}
               </span>
             }
-            detail={`Minimum spend is ${formatSGD(e.minimumSpendShortfall.minimumCents)}; your selections come to ${formatSGD(e.minimumSpendShortfall.basisCents)}.`}
+            detail={t("estimate.minimumSpendDetail", { min: formatSGD(e.minimumSpendShortfall.minimumCents), sub: formatSGD(e.minimumSpendShortfall.basisCents) })}
             cents={e.minimumSpendShortfall.shortfallCents}
           />
         )}
-        {e.serviceCharge && <Row label={`Service charge (${formatBps(e.serviceCharge.rateBps)})`} cents={e.serviceCharge.amountCents} />}
-        {e.gst && <Row label={`GST (${formatBps(e.gst.rateBps)})`} cents={e.gst.amountCents} />}
+        {e.serviceCharge && <Row label={t("estimate.serviceCharge", { rate: formatBps(e.serviceCharge.rateBps) })} cents={e.serviceCharge.amountCents} />}
+        {e.gst && <Row label={t("estimate.gst", { rate: formatBps(e.gst.rateBps) })} cents={e.gst.amountCents} />}
       </dl>
 
       {e.notes.length > 0 && (
@@ -108,20 +126,16 @@ export function EstimateView({ estimate, title = "Estimate" }: { estimate: Estim
 
       <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl bg-subtle p-4">
         <div className="flex flex-col">
-          <span className="text-small text-muted">Estimated total</span>
+          <span className="text-small text-muted">{totalLabel}</span>
           <span className="font-display text-h1 leading-none">
             <AnimatedNumber value={e.totalCents} format={money} />
           </span>
         </div>
-        {e.perGuestCents !== null && (
-          <span className="num text-small text-muted">
-            about <AnimatedNumber value={e.perGuestCents} format={money} /> per guest
-          </span>
-        )}
+        {e.perGuestCents !== null && <PerGuest cents={e.perGuestCents} />}
       </div>
       {/* Screen readers get one summary update instead of every animated digit. */}
       <p className="sr-only" aria-live="polite">
-        Estimated total {formatSGD(e.totalCents)}
+        {t("estimate.totalAnnounce", { label: totalLabel, amount: formatSGD(e.totalCents) })}
       </p>
     </section>
   );

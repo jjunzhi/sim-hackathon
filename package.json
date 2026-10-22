@@ -21,7 +21,8 @@
     "seed": "node scripts/seed.mjs",
     "test:rules": "firebase emulators:exec --only firestore,storage \"vitest run --config vitest.emulator.config.mts tests/rules\"",
     "test:functions": "npm run functions:build && firebase emulators:exec --only auth,firestore,storage,functions \"vitest run --config vitest.emulator.config.mts tests/functions\"",
-    "test:all": "npm test && npm run test:rules && npm run test:functions"
+    "test:all": "npm test && npm run test:rules && npm run test:functions",
+    "admin": "npm run functions:build && node scripts/admin.mjs"
   },
   "dependencies": {
     "firebase": "13.1.0",

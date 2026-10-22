@@ -20,6 +20,7 @@ import { Modal } from "@/components/ui/modal";
 import { signOut, useAuth } from "@/lib/auth/auth-provider";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { getFirebase } from "@/lib/firebase/client";
+import { useT } from "@/lib/i18n/provider";
 
 export default function AccountPage() {
   return (
@@ -30,6 +31,7 @@ export default function AccountPage() {
 }
 
 function Account() {
+  const t = useT();
   const auth = useAuth();
   const [deleteOpen, setDeleteOpen] = useState(false);
   if (auth.status !== "ready") return null;
@@ -40,37 +42,34 @@ function Account() {
       {profile.role === "vendor" && <VendorTheme />}
       <AppHeader />
       <main className="container-page flex flex-col gap-8 py-10">
-        <h1 className="text-h1">Account</h1>
+        <h1 className="text-h1">{t("nav.account")}</h1>
 
         <Card>
           <CardBody className="flex flex-col gap-4">
-            <h2 className="text-h3">Your details</h2>
+            <h2 className="text-h3">{t("auth.account.yourDetails")}</h2>
             <dl className="grid gap-3 sm:grid-cols-[12rem_1fr]">
-              <dt className="text-small text-muted">Email</dt>
+              <dt className="text-small text-muted">{t("auth.email")}</dt>
               <dd className="break-all">{user.email}</dd>
-              <dt className="text-small text-muted">Account type</dt>
+              <dt className="text-small text-muted">{t("auth.account.type")}</dt>
               <dd>
                 <Badge tone="neutral" plain>
-                  {profile.role === "vendor" ? "Vendor" : "Couple"}
+                  {profile.role === "vendor" ? t("auth.account.vendor") : t("auth.account.couple")}
                 </Badge>
               </dd>
-              <dt className="text-small text-muted">Signed in with</dt>
-              <dd>{user.providerData.map((p) => (p.providerId === "google.com" ? "Google" : "Email and password")).join(", ")}</dd>
+              <dt className="text-small text-muted">{t("auth.account.signedInWith")}</dt>
+              <dd>{user.providerData.map((p) => (p.providerId === "google.com" ? t("auth.account.google") : t("auth.account.emailPassword"))).join(", ")}</dd>
             </dl>
           </CardBody>
         </Card>
 
         <Card>
           <CardBody className="flex flex-col gap-4">
-            <h2 className="text-h3">Delete your account</h2>
+            <h2 className="text-h3">{t("auth.account.deleteTitle")}</h2>
             <p className="max-w-2xl text-muted">
-              {profile.role === "vendor"
-                ? "This permanently removes your account, your venues, spaces, prices and photos. Couples will no longer see your listings."
-                : "This permanently removes your account and everything you've saved."}{" "}
-              It can&apos;t be undone.
+              {profile.role === "vendor" ? t("auth.account.deleteBodyVendor") : t("auth.account.deleteBodyCouple")} {t("auth.account.cantUndo")}
             </p>
             <Button variant="secondary" className="self-start text-error" icon={<Trash2 aria-hidden className="size-4" />} onClick={() => setDeleteOpen(true)}>
-              Delete account
+              {t("auth.account.deleteButton")}
             </Button>
           </CardBody>
         </Card>
@@ -81,6 +80,7 @@ function Account() {
 }
 
 function DeleteAccountModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useT();
   const auth = useAuth();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +104,7 @@ function DeleteAccountModal({ open, onOpenChange }: { open: boolean; onOpenChang
       await signOut("/?accountDeleted=1").catch(() => undefined);
     } catch (err) {
       const code = (err as { code?: string }).code ?? "";
-      setError(
-        code.startsWith("auth/")
-          ? authErrorMessage(err)
-          : "We couldn't delete everything just now. Nothing has been lost; please try again.",
-      );
+      setError(code.startsWith("auth/") ? authErrorMessage(err, t) : t("auth.account.deleteFailed"));
       setBusy(false);
     }
   }
@@ -119,22 +115,22 @@ function DeleteAccountModal({ open, onOpenChange }: { open: boolean; onOpenChang
       onOpenChange={(o) => {
         if (!busy) onOpenChange(o);
       }}
-      title="Delete your account?"
-      description={usesPassword ? "Enter your password to confirm." : "Confirm with Google to continue."}
+      title={t("auth.account.deleteConfirmTitle")}
+      description={usesPassword ? t("auth.account.enterPassword") : t("auth.account.confirmGoogle")}
       footer={
         <>
           <Button onClick={() => onOpenChange(false)} disabled={busy}>
-            Keep my account
+            {t("auth.account.keep")}
           </Button>
           <Button variant="primary" onClick={() => onDelete()} loading={busy}>
-            Delete permanently
+            {t("auth.account.deletePermanently")}
           </Button>
         </>
       }
     >
       <form onSubmit={onDelete} className="flex flex-col gap-4">
         {usesPassword && (
-          <Input label="Password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input label={t("auth.password")} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         )}
         {error && (
           <p role="alert" className="text-small font-medium text-error">

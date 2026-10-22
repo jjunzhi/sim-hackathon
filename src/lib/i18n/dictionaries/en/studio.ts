@@ -1,0 +1,131 @@
+/** Studio: the couple's planning flow, item picker, capacity status, render panel and theme names. */
+export const studio = {
+  // Studio page: steps
+  "studio.stepVenue": "Venue",
+  "studio.stepStyle": "Style",
+  "studio.stepRender": "Render",
+  "studio.stepEstimate": "Estimate",
+  "studio.stepShare": "Share",
+  "studio.planningSteps": "Planning steps",
+  "studio.nextStep": "Next: {step}",
+
+  // Studio page: header, saving
+  "studio.defaultPlanName": "{venue} plan",
+  "studio.planYourDay": "Plan your day",
+  "studio.notSaved": "Not saved. Check your connection.",
+  "studio.saveYourPlan": "Save your plan",
+  "studio.savePlan": "Save plan",
+  "studio.planOpenError": "We couldn't open this plan. It may have been deleted.",
+  "studio.planSavedTitle": "Plan saved",
+  "studio.planSavedDesc": "Changes now save automatically.",
+  "studio.planSaveFailed": "We couldn't save your plan",
+  "studio.coupleOnlyTitle": "Plans are saved by couple accounts",
+  "studio.coupleOnlyDesc": "Vendor accounts can't save plans.",
+  "studio.planLimitTitle": "You can keep up to {n} plans",
+  "studio.planLimitDesc": "Delete one under My plans to save this one.",
+  "studio.venueUnavailable": "This venue isn't available. It may have been unpublished.",
+  "studio.opening": "Opening the studio",
+
+  // Studio page: summary bar
+  "studio.confirmedTotal": "Confirmed total",
+  "studio.estimatedTotal": "Estimated total",
+
+  // Studio page: Venue step
+  "studio.room": "Room",
+  "studio.capacityRange": "{min} to {max} guests",
+  "studio.pricing": "Pricing",
+  "studio.pricingHint": "Ask the venue which dates count as Peak.",
+  "studio.tierPeak": "Peak",
+  "studio.tierOffPeak": "Off-Peak",
+  "studio.guests": "Guests",
+
+  // Studio page: Style step
+  "studio.theme": "Theme",
+  "studio.themeHint": "Cultural themes are pending community review.",
+  "studio.loadingDecor": "Loading decor",
+
+  // Studio page: Render step
+  "studio.createAccountPrompt": "Create a free account to see this room decorated with your choices. Your plan comes with you.",
+  "studio.saveAndContinue": "Save your plan and continue",
+  "studio.tooManyItems": "Renders can show up to {max} items. Deselect a few to render.",
+  "studio.saveToKeepRenders": "Save your plan to keep renders.",
+  "studio.savedRenders": "Saved renders ({n} of {max})",
+  "studio.themeDemo": "{theme} · DEMO",
+  "studio.removeSavedRender": "Remove saved render, {theme}",
+  "studio.savedToPlan": "Saved to your plan",
+  "studio.savedRendersFull": "Saved renders are full ({max})",
+  "studio.saveThisRender": "Save this render",
+
+  // Studio page: Estimate step
+  "studio.workingOutEstimate": "Working out your estimate",
+  "studio.printOrPdf": "Print or save as PDF",
+  "studio.saveToPrint": "Save your plan to print or save the estimate as a PDF.",
+
+  // Studio page: Share step
+  "studio.shareWithFamily": "Share with family",
+  "studio.shareIntro": "Save your plan and a couple of renders, then send family a private link to vote for a favourite.",
+
+  // ItemPicker
+  "studio.venueOwnDecor": "The venue's own decor",
+  "studio.decoratorAtVenue": "Decorator who works at this venue",
+  "studio.includedIn": "Included in {package}",
+  "studio.priceUnit": "{price} {unit}",
+  "studio.priceUnitNoRender": "{price} {unit} · not shown in renders",
+  "studio.howMany": "How many: {item}",
+  "studio.packageName": "{name} (package)",
+  "studio.packageDesc": "{price} {unit} · includes {items}",
+  "studio.items": "items",
+  "unit.perPiece": "per piece",
+  "unit.perTable": "per table",
+  "unit.perGuest": "per guest",
+
+  // CapacityStatus
+  "studio.overCapacity": "Over this room's maximum of {max} guests. Trim the guest list or choose a larger room.",
+  "studio.underCapacity": "Below this room's minimum of {min} guests. Check with the venue before booking.",
+  "studio.withinCapacity": "Within capacity",
+
+  // Themes (THEME_OPTIONS in src/lib/render/themes.ts; stored values never change)
+  "theme.peranakan": "Peranakan",
+  "theme.modernBotanical": "Modern Botanical",
+  "theme.chinese": "Chinese",
+  "theme.malayPelamin": "Malay Pelamin",
+  "theme.indianVivaha": "Indian Vivaha",
+  "theme.fusionChineseMalay": "Fusion: Chinese and Malay",
+  "theme.fusionChineseMalay.description": "Blends both traditions",
+  "theme.fusionChineseIndian": "Fusion: Chinese and Indian",
+  "theme.fusionChineseIndian.description": "Blends both traditions",
+  "theme.fusionMalayIndian": "Fusion: Malay and Indian",
+  "theme.fusionMalayIndian.description": "Blends both traditions",
+
+  // RenderPanel
+  "render.failed": "We couldn't create this render. Please try again.",
+  "render.chooseRoom": "Choose a room with a photo to render it.",
+  "render.seeItDecorated": "See it decorated",
+  "render.renderAgain": "Render again",
+  "render.showItDecorated": "Show it decorated",
+  "render.stale": "Your theme or items changed. Render again to see them.",
+  "render.decorating": "Decorating your room...",
+  "render.underMinute": "This usually takes under a minute.",
+  "render.beforeAlt": "The room as it is today",
+  "render.afterAlt": "AI illustration of the room in the {theme} theme with {items}",
+  "render.noDecorItems": "no decor items",
+  "render.today": "Today",
+  "render.demo": "Demo",
+  "render.decorated": "Decorated",
+  "render.noAllowanceUsed": "Nothing was used from your render allowance.",
+  "render.demoBadge": "DEMO: not an AI render",
+  "render.details": "Visualization details",
+  "render.theme": "Theme",
+  "render.decorShown": "Decor shown",
+  "render.noneLighting": "None (lighting and colour only)",
+  "render.madeWith": "Made with",
+  "render.demoMode": "DEMO mode: the real photo with a colour wash, no AI",
+  "render.created": "Created",
+  "render.allowance": "Allowance",
+  "render.reused": "Reused a saved render, so none of your allowance was used",
+  "render.usedOne": "Used 1 render from your allowance",
+  "render.note": "Note",
+  "render.noteText": "Only items the vendor can really deliver are shown. Layout, scale and colours are approximate.",
+  "render.announceLoading": "Decorating your room.",
+  "render.announceReady": "Render ready.",
+} as const;

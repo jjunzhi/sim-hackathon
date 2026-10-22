@@ -24,6 +24,11 @@ service cloud.firestore {
         && get(userPath(request.auth.uid)).data.role == 'couple';
     }
 
+    // Family members viewing a share link sign in anonymously.
+    function isAnonymous() {
+      return request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
     function isInt(v, lo, hi) {
       return v is int && v >= lo && v <= hi;
     }
@@ -32,13 +37,19 @@ service cloud.firestore {
       return v is string && v.size() <= max;
     }
 
+    // YYYY-MM-DD; the client checks the calendar, the rule checks the shape.
+    function isIsoDate(v) {
+      return v is string && v.matches('[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])');
+    }
+
     // ---------- users/{uid}: role and PDPA consent, written once ----------
     // Role is chosen at sign-up and can never be changed by the client.
     // The profile is deleted only by the deleteAccount function (Admin SDK).
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
 
-      allow create: if signedIn() && request.auth.uid == uid
+      // Anonymous (family voting) sessions can never become a couple or vendor.
+      allow create: if signedIn() && request.auth.uid == uid && !isAnonymous()
         && request.resource.data.keys().hasOnly(['role', 'consent', 'createdAt'])
         && request.resource.data.keys().hasAll(['role', 'consent', 'createdAt'])
         && request.resource.data.role in ['couple', 'vendor']
@@ -50,12 +61,22 @@ service cloud.firestore {
         && request.resource.data.consent.acceptedAt == request.time
         && request.resource.data.createdAt == request.time;
 
-      allow update, delete: if false;
+      // The reader's language is the one thing a user may change later (Phase 6).
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['locale'])
+        && request.resource.data.locale in ['en', 'zh', 'ms', 'ta'];
+      allow delete: if false;
     }
 
     // ---------- venues ----------
     function validTags(t) {
       return t is list && t.size() <= 12;
+    }
+
+    // Vendor-declared dietary coverage (Phase 6): ids only, each at most once.
+    function validDietTags(t) {
+      return t is list && t.size() <= 5 && t.toSet().size() == t.size()
+        && t.hasOnly(['halal', 'vegetarian', 'vegan', 'no-beef', 'no-pork']);
     }
 
     function validTax(t) {
@@ -87,8 +108,9 @@ service cloud.firestore {
       // capacitySummary is optional and written only by the server trigger.
       return d.keys().hasOnly([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
-          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
-          'capacitySummary', 'createdAt', 'updatedAt'])
+          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess',
+          'stepFreeEntrance', 'accessibleToilet', 'accessibleParking', 'menuOptions', 'coverPhoto',
+          'capacitySummary', 'listed', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
           'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
@@ -102,13 +124,22 @@ service cloud.firestore {
         && validTags(d.cultureTags)
         && d.wheelchairAccess is bool
         && d.liftAccess is bool
+        // Phase 6 fields are optional so venues saved earlier can still be updated.
+        && d.get('stepFreeEntrance', false) is bool
+        && d.get('accessibleToilet', false) is bool
+        && d.get('accessibleParking', false) is bool
+        && validDietTags(d.get('menuOptions', []))
         && validPhoto(d.coverPhoto, 'venues/' + venueId)
         && d.updatedAt == request.time;
     }
 
     match /venues/{venueId} {
-      // Public read only for active venues; owners always see their own.
-      allow read: if resource.data.status == 'active'
+      // Anyone can open an active venue they already know (saved plans, family
+      // links). Finding it in the catalog also needs `listed`: the vendor's plan
+      // is in good standing (Phase 7). Owners always see their own.
+      allow get: if resource.data.status == 'active'
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow list: if (resource.data.status == 'active' && resource.data.listed == true)
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
 
       // Only vendors create venues, always as an unverified draft they own.
@@ -117,6 +148,7 @@ service cloud.firestore {
         && request.resource.data.status == 'draft'
         && request.resource.data.verified == false
         && !('capacitySummary' in request.resource.data)
+        && !('listed' in request.resource.data)
         && request.resource.data.createdAt == request.time
         && validVenue(request.resource.data, venueId);
 
@@ -126,6 +158,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.verified == resource.data.verified
         && request.resource.data.get('capacitySummary', null) == resource.data.get('capacitySummary', null)
+        && request.resource.data.get('listed', null) == resource.data.get('listed', null)
         && request.resource.data.createdAt == resource.data.createdAt
         && validVenue(request.resource.data, venueId);
 
@@ -199,7 +232,7 @@ service cloud.firestore {
     function validVendor(d) {
       return d.keys().hasOnly([
           'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
-          'published', 'createdAt', 'updatedAt'])
+          'published', 'listed', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
           'published', 'createdAt', 'updatedAt'])
@@ -231,18 +264,23 @@ service cloud.firestore {
         return exists(/databases/$(database)/documents/vendors/$(uid));
       }
 
-      allow read: if resource.data.published == true || ownsVendor();
+      // Direct reads keep existing plans priced; discovery (decorators for a
+      // venue) also needs `listed`, which only the server writes (Phase 7).
+      allow get: if resource.data.published == true || ownsVendor();
+      allow list: if (resource.data.published == true && resource.data.listed == true) || ownsVendor();
       allow create: if ownsVendor() && isVendor()
         && validVendor(request.resource.data)
+        && !('listed' in request.resource.data)
         && request.resource.data.createdAt == request.time;
       allow update: if ownsVendor()
         && validVendor(request.resource.data)
+        && request.resource.data.get('listed', null) == resource.data.get('listed', null)
         && request.resource.data.createdAt == resource.data.createdAt;
       // Removed only by account deletion (Admin SDK).
       allow delete: if false;
 
       function validItem(d) {
-        return d.keys().hasOnly(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
+        return d.keys().hasOnly(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'dietaryTags', 'createdAt', 'updatedAt'])
           && d.keys().hasAll(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
           && d.name is string && d.name.size() > 0 && d.name.size() <= 120
           && d.category in ['Florals', 'Lighting', 'Backdrops and stage', 'Table decor', 'Furniture', 'Draping', 'Signage', 'Food and drink', 'Other']
@@ -251,6 +289,7 @@ service cloud.firestore {
           && isText(d.description, 1000)
           && validPhoto(d.photo, 'vendors/' + uid)
           && d.active is bool
+          && validDietTags(d.get('dietaryTags', []))
           && d.updatedAt == request.time;
       }
 
@@ -289,13 +328,27 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if ownsVendor();
       }
+
+      // Dates the vendor already has booked (Phase 6). Public once published, like items.
+      match /blockedDates/{dateId} {
+        allow read: if ownsVendor() || vendorPublished();
+        allow create: if ownsVendor() && vendorExists()
+          && request.resource.data.keys().hasOnly(['date', 'note', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['date', 'note', 'createdAt', 'updatedAt'])
+          && isIsoDate(request.resource.data.date)
+          && isText(request.resource.data.note, 80)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if false;
+        allow delete: if ownsVendor();
+      }
     }
 
     // ---------- projects/{id}: a couple's saved plans (owner only) ----------
     function validPlan(d) {
       return d.keys().hasOnly([
           'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
-          'selections', 'savedRenders', 'createdAt', 'updatedAt'])
+          'selections', 'savedRenders', 'weddingDate', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
           'selections', 'savedRenders', 'createdAt', 'updatedAt'])
@@ -307,6 +360,7 @@ service cloud.firestore {
         && isText(d.themeId, 64)
         && d.selections is map && d.selections.size() <= 60
         && d.savedRenders is list && d.savedRenders.size() <= 6
+        && (d.get('weddingDate', null) == null || isIsoDate(d.weddingDate))
         && d.updatedAt == request.time;
     }
 
@@ -353,6 +407,139 @@ service cloud.firestore {
       }
     }
 
+    // ---------- shares/{shareId}: family links ----------
+    // The id is 128 random bits: knowing it is the permission to view.
+    // Links can be fetched by id, never listed by others. Revoking clears the
+    // options, so a revoked link shows nothing but its status.
+    function validShareOption(o) {
+      return o is map
+        && o.keys().hasOnly(['planId', 'venueName', 'planName', 'renderKey', 'renderPath', 'themeId', 'demo', 'aspect', 'estimateTotalCents'])
+        && o.renderPath is string && o.renderPath.matches('renders/[0-9a-f]{64}[.]jpg')
+        && isInt(o.estimateTotalCents, 0, 100000000000);
+    }
+
+    match /shares/{shareId} {
+      function share() {
+        return get(/databases/$(database)/documents/shares/$(shareId)).data;
+      }
+
+      allow get: if signedIn();
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isCouple()
+        && shareId.size() >= 22
+        && request.resource.data.keys().hasOnly(['ownerUid', 'title', 'status', 'options', 'createdAt', 'updatedAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'active'
+        && isText(request.resource.data.title, 80)
+        && request.resource.data.options is list
+        && request.resource.data.options.size() >= 2
+        && request.resource.data.options.size() <= 3
+        && validShareOption(request.resource.data.options[0])
+        && validShareOption(request.resource.data.options[1])
+        && (request.resource.data.options.size() < 3 || validShareOption(request.resource.data.options[2]))
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // The only change allowed is revoking, which is final.
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'options', 'title', 'updatedAt'])
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.options.size() == 0
+        && request.resource.data.title == ''
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      // One vote per voter per link: the document id is the voter's uid and
+      // votes can never be changed or deleted by a client. No IP addresses.
+      match /votes/{voterId} {
+        allow read: if signedIn() && (request.auth.uid == voterId || share().ownerUid == request.auth.uid);
+        allow create: if signedIn() && request.auth.uid == voterId
+          && share().status == 'active'
+          && request.resource.data.keys().hasOnly(['optionIndex', 'name', 'note', 'createdAt'])
+          && request.resource.data.keys().hasAll(['optionIndex', 'name', 'note', 'createdAt'])
+          && isInt(request.resource.data.optionIndex, 0, share().options.size() - 1)
+          && isText(request.resource.data.name, 40)
+          && isText(request.resource.data.note, 280)
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        // Only the couple, when deleting their own link.
+        allow delete: if signedIn() && share().ownerUid == request.auth.uid;
+      }
+    }
+
+    // ---------- leads/{leadId}: a couple asks one vendor to confirm ----------
+    match /leads/{leadId} {
+      allow read: if signedIn() && (resource.data.coupleUid == request.auth.uid || resource.data.vendorUid == request.auth.uid);
+      allow create: if isCouple()
+        && request.resource.data.keys().hasOnly([
+            'coupleUid', 'vendorUid', 'venueOwnerUid', 'planId', 'venueId', 'venueName', 'vendorName',
+            'spaceId', 'spaceName', 'tierKey', 'headcount', 'selections', 'renders', 'contact',
+            'status', 'confirmationId', 'createdAt', 'updatedAt'])
+        && request.resource.data.coupleUid == request.auth.uid
+        && request.resource.data.vendorUid is string && request.resource.data.vendorUid != request.auth.uid
+        && exists(/databases/$(database)/documents/projects/$(request.resource.data.planId))
+        && get(/databases/$(database)/documents/projects/$(request.resource.data.planId)).data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'new'
+        && request.resource.data.confirmationId == null
+        && isInt(request.resource.data.headcount, 0, 7000)
+        && request.resource.data.selections is map && request.resource.data.selections.size() <= 60
+        && request.resource.data.renders is list && request.resource.data.renders.size() <= 6
+        && request.resource.data.contact is map
+        && request.resource.data.contact.keys().hasOnly(['name', 'reachAt', 'eventDate', 'message'])
+        && request.resource.data.contact.name is string && request.resource.data.contact.name.size() > 0
+        && isText(request.resource.data.contact.name, 80)
+        && request.resource.data.contact.reachAt is string && request.resource.data.contact.reachAt.size() > 0
+        && isText(request.resource.data.contact.reachAt, 120)
+        && isText(request.resource.data.contact.eventDate, 20)
+        && isText(request.resource.data.contact.message, 1000)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // The vendor may only decline, or mark confirmed alongside its confirmation.
+      allow update: if signedIn()
+        && resource.data.vendorUid == request.auth.uid
+        && resource.data.status == 'new'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmationId', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && (
+          (request.resource.data.status == 'declined' && request.resource.data.confirmationId == null)
+          || (request.resource.data.status == 'confirmed'
+              && request.resource.data.confirmationId == leadId
+              && existsAfter(/databases/$(database)/documents/confirmations/$(leadId)))
+        );
+      // A couple can withdraw a request that hasn't been confirmed.
+      allow delete: if signedIn() && resource.data.coupleUid == request.auth.uid && resource.data.status != 'confirmed';
+    }
+
+    // ---------- confirmations/{leadId}: immutable vendor-confirmed snapshot ----------
+    match /confirmations/{leadId} {
+      function lead() {
+        return get(/databases/$(database)/documents/leads/$(leadId)).data;
+      }
+
+      allow read: if signedIn() && (resource.data.vendorUid == request.auth.uid || resource.data.coupleUid == request.auth.uid);
+      allow create: if signedIn()
+        && lead().vendorUid == request.auth.uid
+        && lead().status == 'new'
+        && request.resource.data.keys().hasOnly([
+            'leadId', 'vendorUid', 'coupleUid', 'planId', 'vendorName', 'venueName', 'spaceName', 'tierKey',
+            'headcount', 'snapshot', 'engineVersion', 'confirmedBy', 'confirmedByName', 'note', 'confirmedAt', 'validUntil'])
+        && request.resource.data.leadId == leadId
+        && request.resource.data.vendorUid == request.auth.uid
+        && request.resource.data.confirmedBy == request.auth.uid
+        && request.resource.data.coupleUid == lead().coupleUid
+        && request.resource.data.planId == lead().planId
+        && request.resource.data.headcount == lead().headcount
+        && request.resource.data.snapshot is map
+        && isText(request.resource.data.note, 500)
+        && request.resource.data.confirmedAt == request.time
+        && request.resource.data.validUntil is timestamp
+        && request.resource.data.validUntil > request.time
+        && request.resource.data.validUntil <= request.time + duration.value(91, 'd')
+        && getAfter(/databases/$(database)/documents/leads/$(leadId)).data.status == 'confirmed';
+      // Confirmed estimates never change. Only account deletion (Admin SDK) touches them.
+      allow update, delete: if false;
+    }
+
     // ---------- renders (written only by the requestRender function) ----------
     // No personal data; shared between couples. Family members viewing a share
     // link sign in anonymously, which counts as signed in.
@@ -377,5 +564,106 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+    // ---------- checklists/{uid}: ritual checklist ticks and the couple's own items (Phase 6) ----------
+    match /checklists/{uid} {
+      function ownsChecklist() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      allow read, delete: if ownsChecklist();
+      allow create, update: if ownsChecklist() && isCouple()
+        && request.resource.data.keys().hasOnly(['ticks', 'updatedAt'])
+        && request.resource.data.ticks is map
+        && request.resource.data.ticks.size() <= 400
+        && request.resource.data.updatedAt == request.time;
+
+      match /items/{itemId} {
+        allow read, delete: if ownsChecklist();
+        allow create, update: if ownsChecklist() && isCouple()
+          && request.resource.data.keys().hasOnly(['ritualId', 'text', 'done', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['ritualId', 'text', 'done', 'createdAt', 'updatedAt'])
+          && request.resource.data.ritualId in ['tea', 'nikah', 'vivaha', 'rom']
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 120
+          && request.resource.data.done is bool
+          && request.resource.data.updatedAt == request.time;
+      }
+    }
+
+    // ---------- billing/{uid}: plan status (Phase 7) ----------
+    // Written only by the server: the Stripe webhook, invite redemption and admin scripts.
+    match /billing/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---------- bookings/{leadId}: a confirmed lead that became a booking (Phase 7) ----------
+    // The vendor says it booked; the couple confirms or disputes. Only confirmed
+    // bookings count towards commission. No contact details are copied here.
+    match /bookings/{leadId} {
+      function lead() {
+        return get(/databases/$(database)/documents/leads/$(leadId)).data;
+      }
+
+      function validBookingFields(d) {
+        return isIsoDate(d.eventDate)
+          && (d.valueCents == null || isInt(d.valueCents, 0, 100000000000));
+      }
+
+      allow read: if signedIn()
+        && (resource.data.vendorUid == request.auth.uid || resource.data.coupleUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && lead().vendorUid == request.auth.uid
+        && lead().status == 'confirmed'
+        && request.resource.data.keys().hasOnly(['leadId', 'vendorUid', 'coupleUid', 'eventDate', 'valueCents', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['leadId', 'vendorUid', 'coupleUid', 'eventDate', 'valueCents', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.leadId == leadId
+        && request.resource.data.vendorUid == request.auth.uid
+        && request.resource.data.coupleUid == lead().coupleUid
+        && request.resource.data.status == 'claimed'
+        && validBookingFields(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // The couple answers a claim once: confirmed or disputed.
+      allow update: if signedIn()
+        && resource.data.coupleUid == request.auth.uid
+        && resource.data.status == 'claimed'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt', 'updatedAt'])
+        && request.resource.data.status in ['confirmed', 'disputed']
+        && request.resource.data.respondedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // The vendor may correct the date or value, which asks the couple again.
+      allow update: if signedIn()
+        && resource.data.vendorUid == request.auth.uid
+        && resource.data.status in ['claimed', 'disputed']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['eventDate', 'valueCents', 'status', 'updatedAt'])
+        && request.resource.data.status == 'claimed'
+        && validBookingFields(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+
+      // A claim can be withdrawn until the couple confirms it.
+      allow delete: if signedIn()
+        && resource.data.vendorUid == request.auth.uid
+        && resource.data.status != 'confirmed';
+    }
+
+    // ---------- feedback/{id}: vendors' in-app feedback during the pilot (Phase 7) ----------
+    // Write-only from the app; read in the console.
+    match /feedback/{id} {
+      allow create: if isVendor()
+        && request.resource.data.keys().hasOnly(['uid', 'text', 'page', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'text', 'page', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && isText(request.resource.data.page, 200)
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
   }
 }

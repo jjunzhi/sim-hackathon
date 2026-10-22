@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, CircleCheck, Circle } from "lucide-react";
+import { ArrowLeft, CircleAlert, CircleCheck, Circle } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { PhotoPicker } from "@/components/photos/photo-picker";
 import { SpacesEditor } from "@/components/vendor/spaces-editor";
@@ -14,6 +14,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { JourneyStepper } from "@/components/ui/journey-stepper";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import { useBilling } from "@/lib/billing/use-billing";
 import { setVenueStatus, updateVenue, uploadCoverPhoto, watchSpaces, watchVenue, type WithId } from "@/lib/data/venues";
 import { stepVariants } from "@/lib/motion";
 import type { Space, Venue } from "@/lib/venues/model";
@@ -163,7 +164,10 @@ function VenueEditor() {
 function PublishPanel({ venue, checks }: { venue: WithId<Venue>; checks: ReturnType<typeof publishChecklist> }) {
   const [busy, setBusy] = useState(false);
   const toast = useToast();
-  const ready = canPublish(checks);
+  const { standing } = useBilling(venue.ownerUid);
+  // Couples find a venue only while the plan is in good standing (Phase 7).
+  const planOk = standing !== null && standing.kind !== "lapsed";
+  const ready = canPublish(checks) && planOk;
   const published = venue.status === "active";
 
   async function setStatus(status: "draft" | "active") {
@@ -194,6 +198,18 @@ function PublishPanel({ venue, checks }: { venue: WithId<Venue>; checks: ReturnT
             </li>
           ))}
         </ul>
+        {standing && !planOk && (
+          <p className="flex max-w-2xl items-start gap-2 rounded-xl border border-warning-icon bg-surface p-3 text-small">
+            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-warning-icon" />
+            <span>
+              Couples can find your venue once you have a plan: use your pilot invite or choose the monthly plan in{" "}
+              <Link href="/vendor/billing" className="font-semibold underline underline-offset-4">
+                Plan and billing
+              </Link>
+              .
+            </span>
+          </p>
+        )}
         <p className="max-w-2xl text-small text-muted">
           Service charge and GST are set once for your whole business, on the Business page.
         </p>

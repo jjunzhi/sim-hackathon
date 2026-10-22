@@ -5,15 +5,19 @@ import { motion } from "motion/react";
 import { Accessibility, ArrowUpDown, BadgeCheck, Building2, Users } from "lucide-react";
 import { StorageImage } from "@/components/photos/storage-image";
 import { Card, CardBody } from "@/components/ui/card";
+import { useT } from "@/lib/i18n/provider";
 import { formatSGD } from "@/lib/money";
 import { revealItem } from "@/lib/motion";
 import type { CatalogVenue } from "@/lib/venues/catalog";
+import { DIET_KEYS, type DietTag } from "@/lib/venues/inclusion";
+import { tagLabel } from "@/lib/venues/tag-labels";
 
 export function VenueCard({ venue }: { venue: CatalogVenue }) {
+  const t = useT();
   const s = venue.capacitySummary;
   return (
     <motion.li variants={revealItem}>
-      <Link href={`/venues/${venue.id}`} className="block h-full rounded-card" aria-label={`${venue.name}${s ? `, ${s.min} to ${s.max} guests` : ""}`}>
+      <Link href={`/venues/${venue.id}`} className="block h-full rounded-card" aria-label={s ? t("catalog.cardLabel", { name: venue.name, min: s.min, max: s.max }) : venue.name}>
         <Card interactive className="flex h-full flex-col">
           {venue.coverPhoto ? (
             <StorageImage photo={venue.coverPhoto} alt="" aspect="3 / 2" className="rounded-none" sizes="(min-width: 64rem) 380px, (min-width: 40rem) 50vw, 100vw" />
@@ -30,7 +34,7 @@ export function VenueCard({ venue }: { venue: CatalogVenue }) {
                 {venue.verified && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-success px-2 py-0.5 text-small font-semibold text-success">
                     <BadgeCheck aria-hidden className="size-3.5" />
-                    Verified
+                    {t("badge.verified")}
                   </span>
                 )}
               </div>
@@ -41,40 +45,44 @@ export function VenueCard({ venue }: { venue: CatalogVenue }) {
                 <div className="flex items-center gap-1.5">
                   <dt>
                     <Users aria-hidden className="size-4 text-muted" />
-                    <span className="sr-only">Guests</span>
+                    <span className="sr-only">{t("catalog.guests")}</span>
                   </dt>
-                  <dd className="num">
-                    {s.min} to {s.max} guests
-                  </dd>
+                  <dd className="num">{t("catalog.guestRange", { min: s.min, max: s.max })}</dd>
                 </div>
               )}
               {s?.fromRentalCents != null && (
                 <div className="flex items-center gap-1.5">
-                  <dt className="text-muted">Room from</dt>
+                  <dt className="text-muted">{t("catalog.roomFrom")}</dt>
                   <dd className="num font-semibold">{formatSGD(s.fromRentalCents, { showCents: false })}</dd>
                 </div>
               )}
             </dl>
-            <ul className="flex flex-wrap gap-1.5" aria-label="Style and culture">
-              {[...venue.styleTags, ...venue.cultureTags].map((t) => (
-                <li key={t} className="rounded-full bg-subtle px-2.5 py-0.5 text-small text-ink">
-                  {t}
+            <ul className="flex flex-wrap gap-1.5" aria-label={t("catalog.styleAndCulture")}>
+              {[...venue.styleTags, ...venue.cultureTags].map((tag) => (
+                <li key={tag} className="rounded-full bg-subtle px-2.5 py-0.5 text-small text-ink">
+                  {tagLabel(t, tag)}
                 </li>
               ))}
             </ul>
-            <ul className="mt-auto flex flex-wrap gap-3 text-small text-muted" aria-label="Access">
+            <ul className="mt-auto flex flex-wrap gap-3 text-small text-muted" aria-label={t("catalog.access")}>
               {venue.wheelchairAccess && (
                 <li className="flex items-center gap-1">
-                  <Accessibility aria-hidden className="size-4" /> Wheelchair access
+                  <Accessibility aria-hidden className="size-4" /> {t("access.wheelchair")}
                 </li>
               )}
               {venue.liftAccess && (
                 <li className="flex items-center gap-1">
-                  <ArrowUpDown aria-hidden className="size-4" /> Lift
+                  <ArrowUpDown aria-hidden className="size-4" /> {t("catalog.lift")}
                 </li>
               )}
-              {!venue.wheelchairAccess && !venue.liftAccess && <li>No step-free access listed</li>}
+              {!venue.wheelchairAccess && !venue.liftAccess && <li>{t("access.none")}</li>}
             </ul>
+            {(venue.menuOptions ?? []).length > 0 && (
+              <p className="text-small text-muted">
+                <span className="sr-only">{t("diet.menus")}: </span>
+                {(venue.menuOptions ?? []).map((m) => t(DIET_KEYS[m as DietTag] ?? "diet.menus")).join(" · ")}
+              </p>
+            )}
           </CardBody>
         </Card>
       </Link>

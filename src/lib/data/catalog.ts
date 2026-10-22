@@ -11,7 +11,8 @@ import type { VendorProfile } from "@/lib/vendors/model";
 export function watchCatalog(onData: (v: CatalogVenue[]) => void, onError: (e: Error) => void): Unsubscribe {
   const { db } = getFirebase();
   return onSnapshot(
-    query(collection(db, "venues"), where("status", "==", "active")),
+    // Only vendors in good standing are discoverable (listed is server-written; rules require this filter).
+    query(collection(db, "venues"), where("status", "==", "active"), where("listed", "==", true)),
     (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<CatalogVenue, "id">) })).sort((a, b) => a.name.localeCompare(b.name))),
     onError,
   );
@@ -28,7 +29,8 @@ export async function getPublishedVenue(venueId: string): Promise<CatalogVenue |
   }
 }
 
-async function getVendorCatalog(uid: string): Promise<VendorCatalog | null> {
+/** A vendor's profile and active items/packages (public once published; always for the owner). */
+export async function getVendorCatalog(uid: string): Promise<VendorCatalog | null> {
   const { db } = getFirebase();
   try {
     const profile = await getDoc(doc(db, "vendors", uid));
@@ -52,9 +54,16 @@ async function getVendorCatalog(uid: string): Promise<VendorCatalog | null> {
  * Everything a couple can choose for this venue: the venue's own items, plus
  * published decorators who work at any venue or chose this one.
  */
-export async function loadVenueCatalogs(venue: Pick<CatalogVenue, "id" | "ownerUid">): Promise<VendorCatalog[]> {
+/**
+ * The venue's own catalog plus decorators who work there. `keepVendorUids`
+ * are vendors a saved plan already uses: they stay priced even if they are no
+ * longer listed, so a lapsed plan never breaks a couple's existing estimate.
+ */
+export async function loadVenueCatalogs(venue: Pick<CatalogVenue, "id" | "ownerUid">, keepVendorUids: string[] = []): Promise<VendorCatalog[]> {
   const { db } = getFirebase();
-  const decorators = await getDocs(query(collection(db, "vendors"), where("published", "==", true), where("kinds", "array-contains", "decorator")));
+  const decorators = await getDocs(
+    query(collection(db, "vendors"), where("published", "==", true), where("listed", "==", true), where("kinds", "array-contains", "decorator")),
+  );
   const serving = decorators.docs
     .filter((d) => d.id !== venue.ownerUid)
     .filter((d) => {
@@ -62,6 +71,7 @@ export async function loadVenueCatalogs(venue: Pick<CatalogVenue, "id" | "ownerU
       return p.servesAnyVenue || p.servesVenueIds.includes(venue.id);
     })
     .map((d) => d.id);
-  const all = await Promise.all([venue.ownerUid, ...serving].map(getVendorCatalog));
+  const uids = [...new Set([venue.ownerUid, ...serving, ...keepVendorUids])];
+  const all = await Promise.all(uids.map(getVendorCatalog));
   return all.filter((c): c is VendorCatalog => c !== null);
 }

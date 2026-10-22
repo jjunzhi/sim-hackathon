@@ -5,12 +5,13 @@
 export const TIERS = ["must", "extended", "close", "casual"] as const;
 export type GuestTier = (typeof TIERS)[number];
 
-export const TIER_LABELS: Record<GuestTier, string> = {
-  must: "Must invite",
-  extended: "Extended family",
-  close: "Close friends",
-  casual: "Casual",
-};
+/** Dictionary key for each tier's label; translate in the component with t(). */
+export const TIER_LABEL_KEYS = {
+  must: "guests.tierMust",
+  extended: "guests.tierExtended",
+  close: "guests.tierClose",
+  casual: "guests.tierCasual",
+} as const satisfies Record<GuestTier, string>;
 
 /** "Must invite" is never suggested for trimming. */
 export type TrimmableTier = Exclude<GuestTier, "must">;
@@ -58,13 +59,16 @@ export function summariseGuests(parties: GuestParty[], capacityMax: number | nul
   return { totalSeats, byTier, remaining, over, trimSuggestion, trimNotEnough: toCut > 0 };
 }
 
-export function validateParty(p: GuestParty): Partial<Record<keyof GuestParty, string>> {
-  const e: Partial<Record<keyof GuestParty, string>> = {};
+/** Dictionary keys for validation messages; the page translates them with the matching GUEST_LIMITS value as {max}. */
+export type GuestFieldError = "guests.errLabelMissing" | "guests.errLabelLong" | "guests.errSeats" | "guests.errPlusOnes" | "guests.errTier";
+
+export function validateParty(p: GuestParty): Partial<Record<keyof GuestParty, GuestFieldError>> {
+  const e: Partial<Record<keyof GuestParty, GuestFieldError>> = {};
   const label = p.label.trim();
-  if (!label) e.label = "Add a label, for example \"Auntie Mei's family\".";
-  else if (label.length > GUEST_LIMITS.labelMax) e.label = `Keep it under ${GUEST_LIMITS.labelMax} characters.`;
-  if (!Number.isSafeInteger(p.seats) || p.seats < 1 || p.seats > GUEST_LIMITS.seatsMax) e.seats = `Enter 1 to ${GUEST_LIMITS.seatsMax}.`;
-  if (!Number.isSafeInteger(p.plusOnes) || p.plusOnes < 0 || p.plusOnes > GUEST_LIMITS.plusOnesMax) e.plusOnes = `Enter 0 to ${GUEST_LIMITS.plusOnesMax}.`;
-  if (!TIERS.includes(p.tier)) e.tier = "Choose a tier.";
+  if (!label) e.label = "guests.errLabelMissing";
+  else if (label.length > GUEST_LIMITS.labelMax) e.label = "guests.errLabelLong";
+  if (!Number.isSafeInteger(p.seats) || p.seats < 1 || p.seats > GUEST_LIMITS.seatsMax) e.seats = "guests.errSeats";
+  if (!Number.isSafeInteger(p.plusOnes) || p.plusOnes < 0 || p.plusOnes > GUEST_LIMITS.plusOnesMax) e.plusOnes = "guests.errPlusOnes";
+  if (!TIERS.includes(p.tier)) e.tier = "guests.errTier";
   return e;
 }

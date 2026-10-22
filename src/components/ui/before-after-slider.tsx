@@ -5,6 +5,7 @@ import { motion, useInView, useReducedMotion } from "motion/react";
 import { ChevronsLeftRight } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/lib/i18n/provider";
 
 export interface BeforeAfterSliderProps {
   before: { src: string; alt: string };
@@ -32,8 +33,8 @@ const clamp = (n: number) => Math.min(100, Math.max(0, n));
 export function BeforeAfterSlider({
   before,
   after,
-  beforeLabel = "Before",
-  afterLabel = "After",
+  beforeLabel: beforeLabelProp,
+  afterLabel: afterLabelProp,
   initial = 50,
   aspect = "4 / 3",
   sizes = "(min-width: 75rem) 1200px, 100vw",
@@ -42,6 +43,9 @@ export function BeforeAfterSlider({
   className,
   children,
 }: BeforeAfterSliderProps) {
+  const t = useT();
+  const beforeLabel = beforeLabelProp ?? t("ui.compare.before");
+  const afterLabel = afterLabelProp ?? t("ui.compare.after");
   const [pos, setPos] = useState(clamp(initial));
   const [touched, setTouched] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,12 +129,12 @@ export function BeforeAfterSlider({
         <motion.div
           role="slider"
           tabIndex={0}
-          aria-label={`Compare ${beforeLabel.toLowerCase()} and ${afterLabel.toLowerCase()}`}
+          aria-label={t("ui.compare.label", { before: beforeLabel.toLowerCase(), after: afterLabel.toLowerCase() })}
           aria-orientation="horizontal"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={rounded}
-          aria-valuetext={`${100 - rounded}% ${afterLabel.toLowerCase()} showing`}
+          aria-valuetext={t("ui.compare.valueText", { percent: 100 - rounded, after: afterLabel.toLowerCase() })}
           onKeyDown={onKeyDown}
           animate={pulse ? { scale: [1, 1.12, 1] } : { scale: 1 }}
           transition={pulse ? { duration: 0.9, ease: "easeInOut", delay: 0.4 } : { duration: 0.15 }}

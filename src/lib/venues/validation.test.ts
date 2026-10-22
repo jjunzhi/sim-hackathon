@@ -57,7 +57,7 @@ describe("validateSpace", () => {
 });
 
 describe("validateVenueProfile", () => {
-  const venue = { name: "SAMPLE Hall", address: "1 Example Road", postalCode: "", description: "", styleTags: [], cultureTags: [] };
+  const venue = { name: "SAMPLE Hall", address: "1 Example Road", postalCode: "", description: "", styleTags: [], cultureTags: [], menuOptions: [] };
 
   it("accepts a minimal venue", () => {
     expect(validateVenueProfile(venue)).toEqual({});

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Role } from "@/lib/data/users";
 import { takeSignOutDestination, useAuth } from "@/lib/auth/auth-provider";
+import { useT } from "@/lib/i18n/provider";
 import { LoadingScreen } from "./auth-shell";
 
 /**
@@ -12,6 +13,7 @@ import { LoadingScreen } from "./auth-shell";
  * this just sends people to the right screen.
  */
 export function RequireAuth({ role, children }: { role?: Role; children: React.ReactNode }) {
+  const t = useT();
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -28,13 +30,12 @@ export function RequireAuth({ role, children }: { role?: Role; children: React.R
   if (role && auth.profile.role !== role) {
     return (
       <main className="container-page flex min-h-[60dvh] flex-col justify-center gap-4 py-16">
-        <h1 className="text-h2">This area is for {role === "vendor" ? "vendors" : "couples"}</h1>
+        <h1 className="text-h2">{role === "vendor" ? t("ui.requireAuth.areaForVendors") : t("ui.requireAuth.areaForCouples")}</h1>
         <p className="max-w-lg text-muted">
-          Your account was created as a {auth.profile.role} account. Account types can&apos;t be changed, so please use a separate
-          account for this.
+          {auth.profile.role === "vendor" ? t("ui.requireAuth.createdAsVendor") : t("ui.requireAuth.createdAsCouple")}
         </p>
         <Link href="/account" className="w-fit font-semibold text-accent-text underline underline-offset-4">
-          Go to your account
+          {t("ui.requireAuth.goToAccount")}
         </Link>
       </main>
     );

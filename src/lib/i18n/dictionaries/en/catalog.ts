@@ -1,0 +1,75 @@
+/** Venue catalog, filters, venue cards and the venue page. */
+export const catalog = {
+  // Tag display labels. Stored values (STYLE_TAGS / CULTURE_TAGS) stay English; see src/lib/venues/tag-labels.ts.
+  "tag.garden": "Garden",
+  "tag.ballroom": "Ballroom",
+  "tag.rooftop": "Rooftop",
+  "tag.heritage": "Heritage",
+  "tag.beach": "Beach",
+  "tag.industrial": "Industrial",
+  "tag.intimate": "Intimate",
+  "tag.waterfront": "Waterfront",
+  "tag.chinese": "Chinese",
+  "tag.malay": "Malay",
+  "tag.indian": "Indian",
+  "tag.peranakan": "Peranakan",
+  "tag.western": "Western",
+  "tag.fusion": "Fusion",
+  "tag.halalFriendly": "Halal-friendly",
+
+  // Price tiers (mirrors TIER_LABELS in src/lib/estimate/build.ts).
+  "tier.peak": "Peak",
+  "tier.offPeak": "Off-Peak",
+  "tier.roomRental": "Room rental",
+
+  // CatalogPage
+  "catalog.intro": "Every venue lists its real rooms, guest numbers and prices.",
+  "catalog.loadError": "We couldn't load venues. Please refresh the page.",
+  "catalog.venueCount_one": "{count} venue",
+  "catalog.venueCount_other": "{count} venues",
+  "catalog.filters": "Filters",
+  "catalog.filtersWithCount": "Filters ({n})",
+  "catalog.clear": "Clear",
+  "catalog.clearFilters": "Clear filters",
+  "catalog.loadingVenues": "Loading venues",
+  "catalog.noMatch": "No venues match all of these",
+  "catalog.noMatchHint": "Try removing a filter or changing the number of guests.",
+  "catalog.noneListed": "No venues are listed yet. Please check back soon.",
+  "catalog.showVenues": "Show venues",
+  "catalog.showCount_one": "Show {count} venue",
+  "catalog.showCount_other": "Show {count} venues",
+
+  // FilterControls
+  "catalog.filterGuests": "Number of guests",
+  "catalog.filterGuestsPlaceholder": "For example, 180",
+  "catalog.filterGuestsHint": "Shows venues with a room that fits.",
+  "catalog.filterAccess": "Access",
+  "catalog.filterStyle": "Style",
+  "catalog.filterCulture": "Culture and traditions",
+
+  // VenueCard
+  "catalog.cardLabel": "{name}, {min} to {max} guests",
+  "catalog.guests": "Guests",
+  "catalog.guestRange": "{min} to {max} guests",
+  "catalog.roomFrom": "Room from",
+  "catalog.styleAndCulture": "Style and culture",
+  "catalog.access": "Access",
+  "catalog.lift": "Lift",
+
+  // VenuePage
+  "catalog.allVenues": "All venues",
+  "catalog.loadingVenue": "Loading venue",
+  "catalog.notAvailable": "This venue isn't available. It may have been unpublished.",
+  "catalog.coverAlt": "{name}, cover photo",
+  "catalog.noWheelchair": "No wheelchair access listed",
+  "catalog.noLift": "No lift listed",
+  "catalog.planHere": "Plan here",
+  "catalog.rooms": "Rooms",
+  "catalog.loadingRooms": "Loading rooms",
+  "catalog.roomAlt": "{name}, empty room",
+  "catalog.capacityLine": "{min} to {max} guests · tables of {seats}",
+  "catalog.minimumSpend": "· minimum spend {amount}",
+  "catalog.decorators": "Decorators who work here",
+  "catalog.itemCount_one": "· {count} item",
+  "catalog.itemCount_other": "· {count} items",
+} as const;

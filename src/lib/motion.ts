@@ -26,7 +26,7 @@ export const transition = {
   fade: { duration: duration.base, ease: "linear" },
   /** Bottom sheets and mobile toasts. */
   spring: { type: "spring", stiffness: 420, damping: 38, mass: 0.9 },
-  /** Small vote bounce. */
+  /** Small vote bounce: springs take two keyframes, so start a little small and overshoot into place. */
   bounce: { type: "spring", stiffness: 600, damping: 15 },
 } satisfies Record<string, Transition>;
 

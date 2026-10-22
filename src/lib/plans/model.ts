@@ -12,6 +12,8 @@ export interface Plan {
   /** Keys from selectionKey(); value is the quantity (per-piece only, otherwise 1). */
   selections: Record<string, number>;
   savedRenders: SavedRender[];
+  /** YYYY-MM-DD, optional (Phase 6). Plans saved earlier have no field. */
+  weddingDate?: string | null;
 }
 
 export interface SavedRender {

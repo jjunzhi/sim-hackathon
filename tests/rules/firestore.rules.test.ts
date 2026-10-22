@@ -152,9 +152,11 @@ describe("venues", () => {
     await assertSucceeds(getDoc(doc(db(VENDOR), "venues", "draft")));
   });
 
-  it("public listing must be limited to active venues", async () => {
+  it("public listing must be limited to active venues of vendors in good standing (listed)", async () => {
     await seedVenue(env, "live", VENDOR, "active");
-    await assertSucceeds(getDocs(query(collection(db(), "venues"), where("status", "==", "active"))));
+    await assertSucceeds(getDocs(query(collection(db(), "venues"), where("status", "==", "active"), where("listed", "==", true))));
+    // Phase 7: without the listed filter, the catalog query is refused.
+    await assertFails(getDocs(query(collection(db(), "venues"), where("status", "==", "active"))));
     await assertFails(getDocs(collection(db(), "venues")));
     await assertSucceeds(getDocs(query(collection(db(VENDOR), "venues"), where("ownerUid", "==", VENDOR))));
   });

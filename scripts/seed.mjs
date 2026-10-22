@@ -36,21 +36,30 @@ const photo = (path, w, h, contentType) => ({ path, width: w, height: h, content
 const tax = (serviceChargeBps, gstBps) => ({ serviceChargeBps, gstBps, noServiceChargeNote: "No service charge", noGstNote: "Prices not subject to GST" });
 
 const VENUE_OWNERS = ["sample-venue-1", "sample-venue-2", "sample-venue-3"];
+const PILOT_BILLING = {
+  status: "none", pilotUntilMs: Date.UTC(2099, 0, 1), pastDueSinceMs: null, stripeCustomerId: null, stripeSubscriptionId: null,
+  currentPeriodEndMs: null, cancelAtPeriodEnd: false, commissionBps: 0, lastEventAtMs: null,
+};
 const DECORATOR = "sample-decorator-1";
 
 await env.withSecurityRulesDisabled(async (ctx) => {
   const db = ctx.firestore();
   const st = ctx.storage(`gs://${PROJECT_ID}.appspot.com`);
   const put = async (path, bytes, contentType) => uploadBytes(ref(st, path), bytes, { contentType });
-  const vendor = (uid, businessName, kinds, t2, extra = {}) =>
-    setDoc(doc(db, `vendors/${uid}`), {
+  // SAMPLE vendors are pilot vendors (Phase 7): free and listed until the pilot date.
+  // billing/{uid} is written first so the listing triggers agree with `listed` below.
+  const vendor = async (uid, businessName, kinds, t2, extra = {}) => {
+    await setDoc(doc(db, `billing/${uid}`), { ...PILOT_BILLING, updatedAtMs: Date.now() });
+    await setDoc(doc(db, `vendors/${uid}`), {
       kinds, businessName, description: "SAMPLE business for testing. Not a real vendor.", tax: t2,
-      servesAnyVenue: true, servesVenueIds: [], published: true, createdAt: t, updatedAt: t, ...extra,
+      servesAnyVenue: true, servesVenueIds: [], published: true, listed: true, createdAt: t, updatedAt: t, ...extra,
     });
+  };
   const venue = async (id, ownerUid, o, hue) => {
     await put(`venues/${id}/cover/c1.jpg`, await room(hue), "image/jpeg");
     await setDoc(doc(db, `venues/${id}`), {
       ownerUid, status: "active", verified: false, postalCode: "", description: "", coverPhoto: photo(`venues/${id}/cover/c1.jpg`, 2048, 1536, "image/jpeg"),
+      stepFreeEntrance: false, accessibleToilet: false, accessibleParking: false, menuOptions: [], listed: true,
       createdAt: t, updatedAt: t, ...o,
     });
   };
@@ -61,11 +70,11 @@ await env.withSecurityRulesDisabled(async (ctx) => {
       seatsPerTable: 10, photo: photo(path, 2048, 1536, "image/jpeg"), photoVersion: 1, sortOrder: 0, createdAt: t, updatedAt: t, ...o,
     });
   };
-  const item = async (vendorUid, id, name, category, unit, priceCents, hex) => {
+  const item = async (vendorUid, id, name, category, unit, priceCents, hex, dietaryTags = []) => {
     const path = `vendors/${vendorUid}/items/${id}/p1.webp`;
     await put(path, await swatch(hex, name), "image/webp");
     await setDoc(doc(db, `vendors/${vendorUid}/items/${id}`), {
-      name, category, unit, priceCents, description: "SAMPLE item.", photo: photo(path, 800, 600, "image/webp"), active: true, createdAt: t, updatedAt: t,
+      name, category, unit, priceCents, description: "SAMPLE item.", photo: photo(path, 800, 600, "image/webp"), active: true, dietaryTags, createdAt: t, updatedAt: t,
     });
   };
 
@@ -75,6 +84,7 @@ await env.withSecurityRulesDisabled(async (ctx) => {
     name: "SAMPLE Garden Pavilion", address: "1 Sample Garden Road, Singapore", postalCode: "123456",
     description: "SAMPLE venue for testing. A glasshouse ballroom opening onto a garden terrace.",
     styleTags: ["Garden", "Ballroom"], cultureTags: ["Chinese", "Malay", "Fusion"], wheelchairAccess: true, liftAccess: true,
+    stepFreeEntrance: true, accessibleToilet: true, accessibleParking: true, menuOptions: ["halal", "vegetarian", "no-beef"],
   }, 0);
   await space("sample-garden-pavilion", "glasshouse", {
     name: "SAMPLE Glasshouse Ballroom", capacityMin: 80, capacityMax: 250,
@@ -87,6 +97,11 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await item(VENUE_OWNERS[0], "arch", "SAMPLE Floral arch", "Florals", "piece", 120_000, "#b84c60");
   await item(VENUE_OWNERS[0], "centrepiece", "SAMPLE Table centrepiece", "Table decor", "table", 8_800, "#7e9c7a");
   await item(VENUE_OWNERS[0], "sash", "SAMPLE Chair sash", "Draping", "guest", 350, "#e7a9b5");
+  await item(VENUE_OWNERS[0], "banquet-halal", "SAMPLE Halal banquet menu", "Food and drink", "guest", 16_800, "#c98f4b", ["halal", "no-pork"]);
+  await item(VENUE_OWNERS[0], "banquet-veg", "SAMPLE Vegetarian banquet menu", "Food and drink", "guest", 14_800, "#7e9c7a", ["vegetarian", "no-beef", "no-pork"]);
+  // Dates the venue already has booked, so couples see them.
+  await setDoc(doc(db, `vendors/${VENUE_OWNERS[0]}/blockedDates/sample-1`), { date: "2027-05-15", note: "SAMPLE booking", createdAt: t, updatedAt: t });
+  await setDoc(doc(db, `vendors/${VENUE_OWNERS[0]}/blockedDates/sample-2`), { date: "2027-06-12", note: "SAMPLE booking", createdAt: t, updatedAt: t });
 
   // Venue 2: heritage, no lift or wheelchair access, no service charge.
   await vendor(VENUE_OWNERS[1], "SAMPLE Heritage Shophouse Pte", ["venue"], tax(0, 900));
@@ -105,6 +120,7 @@ await env.withSecurityRulesDisabled(async (ctx) => {
     name: "SAMPLE Rooftop Loft", address: "3 Sample Skyline Avenue, Singapore", verified: true,
     description: "SAMPLE venue for testing. City views and an industrial loft.",
     styleTags: ["Rooftop", "Industrial"], cultureTags: ["Western", "Indian", "Fusion"], wheelchairAccess: true, liftAccess: true,
+    stepFreeEntrance: true, accessibleToilet: true, accessibleParking: false, menuOptions: ["vegetarian", "vegan"],
   }, 220);
   await space("sample-rooftop-loft", "loft", {
     name: "SAMPLE Skyline Loft", capacityMin: 60, capacityMax: 160,
@@ -122,4 +138,4 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   });
 });
 await env.cleanup();
-console.log("Seeded SAMPLE data: 3 venues, 4 spaces, 6 items, 1 package, 1 decorator. Capacity summaries are filled in by the emulator trigger.");
+console.log("Seeded SAMPLE data: 3 venues, 4 spaces, 8 items, 1 package, 1 decorator, 2 blocked dates. Capacity summaries are filled in by the emulator trigger.");

@@ -61,11 +61,117 @@ node scripts/e2e-phase2.mjs
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
 
+## Pilot and billing (Phase 7)
+
+- **Who is listed.** A vendor appears in the catalog (and as a decorator in the Studio) only while its plan is in good standing: a pilot within its dates, an active or trialing Stripe subscription, or a failed payment still inside its 7-day grace period. The server writes a `listed` flag on `vendors/{uid}` and on each venue, and the catalog queries and rules both require it, so no client can list itself. Lapsing hides a vendor from discovery only. Saved plans, family links, leads and confirmations keep working, and nothing is deleted. The rules in `functions/src/billing/standing.ts` are shared by the webhook, the daily sweep, the admin scripts and the vendor's Plan page.
+- **Pilot invites.** `npm run admin -- invite --until 2027-01-31 --note "SAMPLE venue" --project <id>` prints a link like `/sign-up?role=vendor&invite=<code>`. Opening it preselects the vendor role. After sign-up (email or Google), the vendor area redeems the code once (`redeemInvite`), which makes the account a pilot vendor, free until that date. Codes are 128 random bits and single-use. Vendors can also type a code on the Plan page.
+- **Subscription (Stripe).**
+  - "Choose the monthly plan" opens Stripe Checkout in subscription mode, for cards (`createCheckoutSession`). "Manage billing" opens the Stripe Customer Portal for card changes, invoices and cancelling (`createPortalSession`).
+  - The `stripeWebhook` function verifies the signature on the raw body, applies each event once (`stripeEvents/{id}`), and ignores events older than the last one applied, because Stripe doesn't guarantee order.
+  - Status lives in `billing/{uid}`. Vendors can read it; only the server writes it.
+  - A daily job (`dailyListingSweep`, 03:00 Singapore time) ends pilots and grace periods on time.
+  - Deleting a vendor account cancels its subscription first.
+  - PayNow can't be charged automatically for subscriptions (Stripe only supports it on emailed invoices), so it's left for later.
+- **Price and wording.** S$35 a month, set by `NEXT_PUBLIC_PLAN_PRICE_CENTS` for display and `STRIPE_PRICE_ID` for the charge; keep them in step. The note "No GST is charged on the plan." is configurable (`NEXT_PUBLIC_PLAN_PRICE_NOTE`). Change it if you register for GST; IRAS's threshold is S$1 million taxable turnover.
+- **Bookings.** On a confirmed lead, the vendor can "Mark as booked" with the event date and, optionally, the booked value. The couple sees the claim under that vendor in the Studio estimate and answers "Yes, we booked" or "That's not right". Only confirmed bookings count. They appear on the vendor's Plan page as a monthly statement. **Commission is 0% during the pilot and nothing is charged**; `npm run admin -- set-commission <uid> <bps>` sets a rate (up to 5%) and the statement shows it, but charging it is not built.
+- **Onboarding without help.**
+  - A "Get set up" checklist on the vendor Overview is worked out from the vendor's real data (`src/lib/vendors/setup-steps.ts`). Each step links to where it's done.
+  - A readiness list flags what would confuse couples, such as rooms without photos or a venue without an address.
+  - Publishing needs a plan in good standing and says how to get one.
+  - A Help page answers the first questions, and "Send feedback" stores free text and the page it came from (`feedback/{id}`, readable only in the console).
+- **Admin scripts** (`scripts/admin.mjs`, Admin SDK with your Application Default Credentials):
+  - `invite` and `extend-pilot` manage pilot access.
+  - `set-commission` sets a vendor's rate.
+  - `verify <venueId> [--off]` adds or removes the Verified badge.
+  - `sync <uid>` recomputes a vendor's listing.
+  - `export-pilot` prints a CSV of each vendor's milestones (signed up, first venue, published, listed, first lead, first confirmation, first booking, feedback count) to show where pilot vendors stall. It exports no couple data.
+  
+  Every command needs `--project <id>` or `--emulator`.
+- **Deletion.** A vendor's billing record, bookings and feedback go with the account, and a redeemed invite keeps only that it was used. A couple's side of a booking follows option B, like confirmed leads, and is **pending PDPA review**.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running):
+
+```bash
+node scripts/e2e-phase7.mjs
+```
+
+## Deploy (Firebase App Hosting)
+
+You run these on your own project; nothing here deploys automatically. Check the current App Hosting docs first: when this was written, the supported-frameworks and quickstart pages didn't load, so **confirm that Next.js 16 is supported and that `asia-southeast1` is offered** when you create the backend.
+
+1. Finish **Firebase setup** above (Blaze plan, asia-southeast1, Auth, App Check, budget alert).
+2. **Stripe (sandbox first):**
+   - Create the product "WeddingVista vendor plan" with a monthly S$35 price, and put its `price_...` in `functions/.env` as `STRIPE_PRICE_ID` (see `functions/.env.example`), with `APP_BASE_URL` set to your site.
+   - In Stripe, turn on the Customer Portal, allowing card updates, invoices and cancellation.
+3. **Secrets for Functions:**
+   - `npx firebase functions:secrets:set STRIPE_SECRET_KEY` (your `sk_test_...` key first, then `sk_live_...`).
+   - `npx firebase functions:secrets:set STRIPE_WEBHOOK_SECRET`.
+   - `GEMINI_API_KEY` as in Phase 3.
+4. **Deploy rules and functions:** `npx firebase deploy --only firestore,storage,functions --project <id>`.
+5. **Webhook:** in Stripe, add an event destination for the `stripeWebhook` URL (`https://asia-southeast1-<id>.cloudfunctions.net/stripeWebhook`). Send `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`, and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+   - To test locally against a Stripe sandbox, run `stripe listen --forward-to http://127.0.0.1:5001/<id>/asia-southeast1/stripeWebhook` and use the secret it prints.
+6. **App Hosting backend:**
+   - Run `npx firebase apphosting:backends:create --project <id>`. It connects your GitHub repository and live branch.
+   - Fill in the public Firebase config in `apphosting.yaml`, as listed in its comments.
+   - Grant secret access if you add any with `npx firebase apphosting:secrets:grantaccess <name>`.
+7. Add your App Hosting domain to the App Check reCAPTCHA key and to the Maps key's allowed referrers.
+8. Create the first pilot invites with `npm run admin -- invite --until <date> --project <id>`, and send each vendor their link.
+
+## Before launch: what only you can do
+
+Each item is something the code can't do on its own; the code side is already in place.
+
+- [ ] **PDPA review of option B** (confirmed leads and bookings kept without the couple's details after deletion): `functions/src/deletion.ts`.
+- [ ] **Native-speaker review** of `src/lib/i18n/dictionaries/zh.ts`, `ms.ts` and `ta.ts`; then set each `status` to `"reviewed"` to remove the "draft translation" note.
+- [ ] **Community review** of the ritual checklists (`src/lib/i18n/dictionaries/en/rituals.ts` and the translations); remove the badge in `src/app/(app)/checklists/page.tsx` once reviewed.
+- [ ] **Consent wording**: replace the DRAFT consent text and bump `CONSENT_VERSION` in `src/lib/legal.ts`.
+- [ ] **GST**: confirm the S$1 million threshold on the IRAS site and keep `NEXT_PUBLIC_PLAN_PRICE_NOTE` accurate.
+- [ ] **Stripe**: switch from sandbox to live keys and Price, with the webhook pointing at production.
+- [ ] **Maps key**: restricted to the Maps Embed API and your domains.
+- [ ] **Budget alert** set, and the render limits (`config/renderLimits`) chosen for the pilot.
+- [ ] **App Check** enforced, with the domains registered.
+
+## Culture and inclusion (Phase 6)
+
+- **Languages:** English, 中文 (Simplified Chinese), Bahasa Melayu and தமிழ் on every couple screen and the family vote page; the vendor portal stays English. The language menu sits in the header. The choice is kept in this browser (`localStorage`) and, for signed-in users, on the profile (`users/{uid}.locale`, the one profile field a user may change), so it follows them to another device. `<html lang>` follows the choice, and dates use `Intl` in that language, in Singapore time.
+  - How it works: `src/lib/i18n`. A small typed `t(key, vars)` with `{name}` placeholders and plurals through `Intl.PluralRules` (`key_one` / `key_other`). English is the reference (`dictionaries/en/*.ts`, one file per screen); the other languages load on demand. No i18n library and no `/[lang]/` URLs: every app screen renders on the client, so locale routing would add a proxy and a route segment without any SEO gain.
+  - **The Chinese, Malay and Tamil dictionaries are drafts** (`status: "draft"` in `dictionaries/zh.ts`, `ms.ts`, `ta.ts`). Until a native speaker reviews one and its status is set to `"reviewed"`, readers in that language see a one-line note that the translation is under review. Vendor-entered text (venue and item names, descriptions) is never translated.
+  - `npm test` fails if a language is missing a key, has an extra one, or drops a `{placeholder}`.
+  - Chinese and Tamil switch both fonts to Noto Sans SC and Noto Sans Tamil (self-hosted through `next/font`), because Fraunces and Plus Jakarta Sans have no glyphs for those scripts.
+- **Ritual checklists** (`/checklists`): Chinese Tea Ceremony, Malay Akad Nikah and Sanding, Indian Vivaha and Sangeet, and ROM Solemnization, with items for before and on the day. Ticks and the couple's own items are saved per couple in `checklists/{uid}` (owner only) and deleted with the account. **All checklist content is a draft that needs community review**, and the page says so. The structure is in `src/lib/rituals/content.ts` and the wording is in the dictionaries under `ritual.*`, so reviewers edit text without touching code.
+- **Dietary:** "Food and drink" items can carry halal, vegetarian, vegan, no beef and no pork tags. Venues can list the menus they cater for. Couples filter the catalog by menus and the Studio's food items by tag; decor is never hidden. These are always the **vendor's statements**: the UI says so, and halal venues link to the [MUIS halal search](https://halal.muis.gov.sg/halal/establishments) so couples can check a certificate. We make no certification claims.
+- **Access:** besides wheelchair and lift access, venues can declare a step-free entrance, an accessible toilet and accessible parking. The catalog filters on all five. Anything not declared reads "not listed", never "no". Venues and items saved before Phase 6 have none of the new fields, and the rules accept them as they are.
+- **Maps:** the venue page shows a Google Maps Embed (`place` mode) when `NEXT_PUBLIC_MAPS_EMBED_KEY` is set, plus "Open in Google Maps" and "Directions" links, which need no key. Google lists the Embed API as free with unlimited requests, but the key is public in the browser, so **restrict it in Google Cloud to the Maps Embed API and to your site's HTTP referrers**. Without a key (local and CI) the page shows the links and a note instead of a map. We never geocode or store coordinates.
+- **Calendar (light):** a plan has an optional wedding date. In the Estimate step, "Add to calendar" downloads an all-day `.ics` (RFC 5545; it opens in Google, Apple or Outlook calendars). Vendors list booked dates by hand on their Business page (`vendors/{uid}/blockedDates`; only the date is public, once the business is published). The venue page lists them, and the Studio warns when the chosen date is one of them. Two-way Google Calendar sync is left for the pilot: it needs a verified OAuth consent screen and server-side token storage.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running):
+
+```bash
+node scripts/e2e-phase6.mjs
+```
+
+## Family links, voting and vendor confirmation (Phase 5)
+
+- **Family links** (`shares/{id}`): a couple puts 2 or 3 saved renders, from any of their plans, side by side under one question. The id is 128 random bits (22 characters, base64url), so a link can't be guessed; anyone with the link can open it. Each option shows its plan's estimate total at the moment the link was made, with the Estimate badge and the AI illustration note.
+- **Voting needs no account.** The page signs the visitor in anonymously (**Firebase Anonymous Auth must be enabled in the console** before launch; the emulator has it on). An anonymous session can only read a link and cast one vote; it can't create a profile, a plan or a render. Votes are keyed by the voter's uid and are create-only, so one browser identity votes once and can't change it. Clearing site data gives a new identity, so "one vote per person" is best effort, and the couple can vote on their own link. Voters see only a thank-you and their own choice.
+- **Stored per vote:** the option, an optional name or relationship (40 characters) and an optional note (280). No IP addresses, no contact details.
+- **Results** are for the couple only: percentages by the largest-remainder method, a leader, and "most agree" when one option has 70% or more.
+- **Turning a link off** keeps the document (so the page can say "no longer active") but empties its options and title. **Deleting** a link deletes its votes too. A deleted couple's links read "This project has been removed".
+- **Confirmed estimates** (`leads/{id}` and `confirmations/{id}`): from the Estimate step, a couple asks one vendor at a time to confirm its own part ("Request a confirmed estimate"), typing a name, an email or phone, an optional date and message, and ticking a consent box. The vendor sees the guests, room, its own chosen items (never another vendor's), the saved renders and those details, and confirms or declines. Confirming freezes the engine's estimate as a snapshot, valid until a date the vendor picks (14 days by default, 1 to 90). The rules make confirmations write-once and check that they match the lead; the vendor's browser does the pricing with the shared engine (`engineVersion` is recorded).
+- **What the couple sees:** the confirmed part carries "Vendor Confirmed · Valid until …" and keeps the confirmed lines and totals even when the vendor changes prices later. It drops back to an Estimate when the date passes or when the couple changes that part of the plan (guests, room, tier or that vendor's items). The print view, the plan cards and the vendor's leads table all use the same resolution.
+- **Deletion cascade:** a couple's links and all their votes go with the couple, and so do unconfirmed leads. Confirmed leads follow **option B, pending PDPA review before launch**: the vendor keeps its confirmation snapshot (prices and items) but the couple's contact details, renders and plan link are removed, and the lead is marked `anonymised`. A vendor's leads and confirmations are deleted with the vendor.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running; it drives two browsers, one for the couple or vendor and one for a family member with no account):
+
+```bash
+node scripts/e2e-phase5.mjs
+```
+
 ## Couple journey (Phase 4)
 
 - **Browsing needs no account.** Rendering and saving a plan need a couple account. A plan made before signing up survives the sign-up step. It's kept in this tab's `sessionStorage` until saved, and holds no personal data.
 - **Catalog filters:** guest count (one room must fit), wheelchair access, lift access, style and culture. The guest range and "from" price come from `capacitySummary`. The `venueCapacitySummary` Firestore trigger (asia-southeast1) writes it whenever a space changes, and vendors can't edit it.
-- **Studio steps:** Venue (room, Peak/Off-Peak, guests), Style (theme, items from the venue and from decorators who work there), Render, Estimate, and Share (coming in Phase 5).
+- **Studio steps:** Venue (room, Peak/Off-Peak, guests), Style (theme, items from the venue and from decorators who work there), Render, Estimate, and Share (family links, Phase 5).
   - The guest slider runs from half the room's minimum to 30% above its maximum, with warnings either side.
   - There's one estimate per vendor, plus the total across vendors.
 - **Plans** (`projects/{id}`) are owner-only, up to 10 per couple, and autosave. They hold up to 6 saved renders.

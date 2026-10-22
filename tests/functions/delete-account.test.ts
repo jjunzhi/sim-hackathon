@@ -91,6 +91,7 @@ describe("deleteAccount", () => {
 
     await seedVendor(env, me.uid, true);
     await seed(env, `vendors/${me.uid}/items/i1`, { ...newItem(), createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `vendors/${me.uid}/blockedDates/b1`, { date: "2027-05-15", note: "", createdAt: fixedTime, updatedAt: fixedTime });
     await seed(env, `vendors/${me.uid}/packages/p1`, { ...newPackage({ itemIds: ["i1"] }), createdAt: fixedTime, updatedAt: fixedTime });
     await putFile(`vendors/${me.uid}/items/i1/x.webp`);
 
@@ -113,6 +114,7 @@ describe("deleteAccount", () => {
     expect(await docExists(`vendors/${me.uid}`)).toBe(false);
     expect(await docExists(`vendors/${me.uid}/items/i1`)).toBe(false);
     expect(await docExists(`vendors/${me.uid}/packages/p1`)).toBe(false);
+    expect(await docExists(`vendors/${me.uid}/blockedDates/b1`)).toBe(false);
     expect(await fileExists(`vendors/${me.uid}/items/i1/x.webp`)).toBe(false);
     expect(await authUserExists(me.idToken)).toBe(false);
 
@@ -141,6 +143,9 @@ describe("deleteAccount", () => {
     await seed(env, `guestLists/${me.uid}`, { trimOrder: ["casual", "close", "extended"], planId: null, updatedAt: fixedTime });
     await seed(env, `guestLists/${me.uid}/parties/g1`, { label: "x", tier: "must", seats: 2, plusOnes: 0, createdAt: fixedTime, updatedAt: fixedTime });
     await seed(env, `guestLists/${other.uid}/parties/g9`, { label: "y", tier: "must", seats: 2, plusOnes: 0, createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `checklists/${me.uid}`, { ticks: { "tea.order": true }, updatedAt: fixedTime });
+    await seed(env, `checklists/${me.uid}/items/c1`, { ritualId: "tea", text: "SAMPLE own item", done: false, createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `checklists/${other.uid}`, { ticks: { "rom.rings": true }, updatedAt: fixedTime });
 
     const res = await callDelete(me.idToken);
     expect(res.result).toEqual({ deleted: true });
@@ -149,9 +154,92 @@ describe("deleteAccount", () => {
     expect(await docExists("projects/mine2")).toBe(false);
     expect(await docExists(`guestLists/${me.uid}`)).toBe(false);
     expect(await docExists(`guestLists/${me.uid}/parties/g1`)).toBe(false);
+    expect(await docExists(`checklists/${me.uid}`)).toBe(false);
+    expect(await docExists(`checklists/${me.uid}/items/c1`)).toBe(false);
     expect(await authUserExists(me.idToken)).toBe(false);
     expect(await docExists("projects/theirs")).toBe(true);
     expect(await docExists(`guestLists/${other.uid}/parties/g9`)).toBe(true);
+    expect(await docExists(`checklists/${other.uid}`)).toBe(true);
+  });
+
+  it("couple: links and votes go; unconfirmed leads go; confirmed leads keep the snapshot without contact or plan (option B)", async () => {
+    const me = await signUp(`couple-l-${Date.now()}@example.test`);
+    const other = await signUp(`couple-o-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "couple");
+    const share = (ownerUid: string) => ({ ownerUid, title: "x", status: "active", options: [], createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, "shares/mineShareIdAAAAAAAAAAA", share(me.uid));
+    await seed(env, "shares/mineShareIdAAAAAAAAAAA/votes/anon1", { optionIndex: 0, name: "", note: "", createdAt: fixedTime });
+    await seed(env, "shares/theirShareIdBBBBBBBBBB", share(other.uid));
+    const lead = (status: string) => ({
+      coupleUid: me.uid, vendorUid: "vendor-x", venueOwnerUid: "vendor-x", planId: "p1", venueId: "v", venueName: "V", vendorName: "X",
+      spaceId: "s", spaceName: "S", tierKey: null, headcount: 100, selections: {}, renders: [{ key: "k", path: "renders/k.jpg", themeId: "chinese", aspect: "4 / 3" }],
+      contact: { name: "Sam", reachAt: "sam@example.test", eventDate: "", message: "Hi" }, status, confirmationId: status === "confirmed" ? "Lc" : null,
+      createdAt: fixedTime, updatedAt: fixedTime,
+    });
+    await seed(env, "leads/Ln", lead("new"));
+    await seed(env, "leads/Lc", lead("confirmed"));
+    await seed(env, "confirmations/Lc", { leadId: "Lc", vendorUid: "vendor-x", coupleUid: me.uid, planId: "p1", snapshot: { totalCents: 123 }, confirmedAt: fixedTime, validUntil: fixedTime });
+
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+
+    expect(await docExists("shares/mineShareIdAAAAAAAAAAA")).toBe(false);
+    expect(await docExists("shares/mineShareIdAAAAAAAAAAA/votes/anon1")).toBe(false);
+    expect(await docExists("shares/theirShareIdBBBBBBBBBB")).toBe(true);
+    expect(await docExists("leads/Ln")).toBe(false);
+
+    let kept: Record<string, unknown> = {};
+    let conf: Record<string, unknown> = {};
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      kept = (await getDoc(doc(ctx.firestore(), "leads/Lc"))).data() ?? {};
+      conf = (await getDoc(doc(ctx.firestore(), "confirmations/Lc"))).data() ?? {};
+    });
+    expect(kept).toMatchObject({ status: "confirmed", contact: null, coupleUid: null, planId: null, renders: [], anonymised: true });
+    expect(conf).toMatchObject({ coupleUid: null, planId: null, snapshot: { totalCents: 123 } });
+  });
+
+  it("vendor: its leads and the confirmations it gave are deleted", async () => {
+    const me = await signUp(`vendor-l-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "vendor");
+    await seed(env, "leads/Lv", { vendorUid: me.uid, coupleUid: "c1", status: "confirmed", createdAt: fixedTime });
+    await seed(env, "confirmations/Lv", { vendorUid: me.uid, coupleUid: "c1", snapshot: {}, confirmedAt: fixedTime });
+    await seed(env, "leads/Lother", { vendorUid: "someone-else", coupleUid: "c1", status: "new", createdAt: fixedTime });
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+    expect(await docExists("leads/Lv")).toBe(false);
+    expect(await docExists("confirmations/Lv")).toBe(false);
+    expect(await docExists("leads/Lother")).toBe(true);
+  });
+
+  it("vendor: billing record, bookings and feedback go; a redeemed invite keeps only that it was used", async () => {
+    const me = await signUp(`vendor-b-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "vendor");
+    // STRIPE_SECRET_KEY is "demo" in the emulator, so no Stripe call is made for the subscription id.
+    await seed(env, `billing/${me.uid}`, { status: "active", stripeCustomerId: "cus_x", stripeSubscriptionId: "sub_x", pilotUntilMs: null });
+    await seed(env, "bookings/Lb", { leadId: "Lb", vendorUid: me.uid, coupleUid: "c1", eventDate: "2027-05-22", valueCents: null, status: "confirmed", createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, "bookings/Lother", { leadId: "Lother", vendorUid: "someone-else", coupleUid: "c1", eventDate: "2027-05-22", valueCents: null, status: "claimed", createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, "feedback/f1", { uid: me.uid, text: "SAMPLE", page: "/vendor", createdAt: fixedTime });
+    await seed(env, "invites/INVITEcode-0123456789", { pilotUntilMs: Date.now() + 86400_000, redeemedBy: me.uid });
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+    expect(await docExists(`billing/${me.uid}`)).toBe(false);
+    expect(await docExists("bookings/Lb")).toBe(false);
+    expect(await docExists("bookings/Lother")).toBe(true);
+    expect(await docExists("feedback/f1")).toBe(false);
+    let invite: Record<string, unknown> = {};
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      invite = (await getDoc(doc(ctx.firestore(), "invites/INVITEcode-0123456789"))).data() ?? {};
+    });
+    expect(invite.redeemedBy).toBe("deleted-account");
+  });
+
+  it("couple: bookings keep the vendor's record without the couple (option B)", async () => {
+    const me = await signUp(`couple-b-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "couple");
+    await seed(env, "bookings/Lc", { leadId: "Lc", vendorUid: "vendor-x", coupleUid: me.uid, eventDate: "2027-05-22", valueCents: 100, status: "confirmed", createdAt: fixedTime, updatedAt: fixedTime });
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+    let b: Record<string, unknown> = {};
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      b = (await getDoc(doc(ctx.firestore(), "bookings/Lc"))).data() ?? {};
+    });
+    expect(b).toMatchObject({ coupleUid: null, anonymised: true, status: "confirmed", valueCents: 100 });
   });
 
   it("works for an account that never finished sign-up (no profile)", async () => {

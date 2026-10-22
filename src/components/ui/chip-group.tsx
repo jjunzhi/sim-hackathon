@@ -10,12 +10,15 @@ export function ChipGroup({
   value,
   onChange,
   hint,
+  label,
 }: {
   legend: string;
   options: readonly string[];
   value: string[];
   onChange: (next: string[]) => void;
   hint?: string;
+  /** Display text for an option; the option value itself is used when omitted. */
+  label?: (option: string) => string;
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
@@ -40,7 +43,7 @@ export function ChipGroup({
                 onChange={() => onChange(on ? value.filter((v) => v !== o) : [...value, o])}
               />
               {on && <Check aria-hidden className="size-4" />}
-              {o}
+              {label ? label(o) : o}
             </label>
           );
         })}

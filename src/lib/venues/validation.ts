@@ -5,7 +5,7 @@ export type Errors = Partial<Record<string, string>>;
 
 const isWhole = (n: number) => Number.isSafeInteger(n);
 
-export function validateVenueProfile(v: Pick<Venue, "name" | "address" | "postalCode" | "description" | "styleTags" | "cultureTags">): Errors {
+export function validateVenueProfile(v: Pick<Venue, "name" | "address" | "postalCode" | "description" | "styleTags" | "cultureTags" | "menuOptions">): Errors {
   const e: Errors = {};
   const name = v.name.trim();
   if (!name) e.name = "Add the venue's name.";

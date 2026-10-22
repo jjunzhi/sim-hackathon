@@ -24,7 +24,18 @@ export type WithId<T> = T & { id: string };
 
 export type VenueProfileInput = Pick<
   Venue,
-  "name" | "address" | "postalCode" | "description" | "styleTags" | "cultureTags" | "wheelchairAccess" | "liftAccess"
+  | "name"
+  | "address"
+  | "postalCode"
+  | "description"
+  | "styleTags"
+  | "cultureTags"
+  | "wheelchairAccess"
+  | "liftAccess"
+  | "stepFreeEntrance"
+  | "accessibleToilet"
+  | "accessibleParking"
+  | "menuOptions"
 >;
 
 export type SpaceInput = Pick<Space, "name" | "capacityMin" | "capacityMax" | "seatsPerTable" | "tiers" | "sortOrder">;
@@ -61,7 +72,7 @@ export async function setVenueStatus(venue: WithId<Venue>, status: Venue["status
 export function watchPublishedVenues(onData: (venues: WithId<Venue>[]) => void, onError: (e: Error) => void): Unsubscribe {
   const { db } = getFirebase();
   return onSnapshot(
-    query(collection(db, "venues"), where("status", "==", "active")),
+    query(collection(db, "venues"), where("status", "==", "active"), where("listed", "==", true)),
     (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Venue) }))),
     onError,
   );

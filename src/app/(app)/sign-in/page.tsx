@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { authErrorMessage, safeNext } from "@/lib/auth/errors";
 import { homeFor } from "@/lib/auth/routes";
 import { getFirebase } from "@/lib/firebase/client";
+import { useT } from "@/lib/i18n/provider";
 
 export default function SignInPage() {
   return (
@@ -21,6 +22,7 @@ export default function SignInPage() {
 }
 
 function SignIn() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const auth = useAuth();
@@ -44,7 +46,7 @@ function SignIn() {
     try {
       await signInWithEmailAndPassword(getFirebase().auth, email.trim(), password);
     } catch (err) {
-      setError(authErrorMessage(err));
+      setError(authErrorMessage(err, t));
       setBusy(null);
     }
   }
@@ -55,7 +57,7 @@ function SignIn() {
     try {
       await signInWithPopup(getFirebase().auth, new GoogleAuthProvider());
     } catch (err) {
-      setError(authErrorMessage(err));
+      setError(authErrorMessage(err, t));
       setBusy(null);
     }
   }
@@ -63,7 +65,7 @@ function SignIn() {
   async function onReset() {
     setError(null);
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setError("Enter your email address above first.");
+      setError(t("auth.signIn.enterEmailFirst"));
       return;
     }
     setBusy("reset");
@@ -72,29 +74,29 @@ function SignIn() {
     } catch {
       // Same message either way, so this can't be used to check who has an account.
     }
-    setNotice("If an account uses that email, we've sent a link to reset the password.");
+    setNotice(t("auth.signIn.resetSent"));
     setBusy(null);
   }
 
   return (
     <AuthLayout
-      title="Welcome back"
+      title={t("auth.signIn.title")}
       footer={
         <>
-          New here?{" "}
+          {t("auth.signIn.newHere")}{" "}
           <Link href="/sign-up" className="font-semibold text-accent-text underline underline-offset-4">
-            Create an account
+            {t("auth.signIn.createAccount")}
           </Link>
         </>
       }
     >
       <Button variant="secondary" size="lg" onClick={onGoogle} loading={busy === "google"} disabled={busy !== null} icon={<GoogleIcon />}>
-        Continue with Google
+        {t("auth.continueWithGoogle")}
       </Button>
-      <Divider label="or use email" />
+      <Divider label={t("auth.orUseEmail")} />
       <form onSubmit={onEmail} noValidate className="flex flex-col gap-5">
-        <Input label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Input label="Password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Input label={t("auth.email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input label={t("auth.password")} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && (
           <p role="alert" className="text-small font-medium text-error">
             {error}
@@ -106,10 +108,10 @@ function SignIn() {
           </p>
         )}
         <Button type="submit" variant="primary" size="lg" loading={busy === "email"} disabled={busy !== null}>
-          Sign in
+          {t("nav.signIn")}
         </Button>
         <Button variant="ghost" onClick={onReset} loading={busy === "reset"} disabled={busy !== null} className="self-center">
-          Forgot your password?
+          {t("auth.signIn.forgot")}
         </Button>
       </form>
     </AuthLayout>

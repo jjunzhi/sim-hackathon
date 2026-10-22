@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { authErrorMessage, safeNext } from "./errors";
+import { en } from "@/lib/i18n/dictionaries/en";
+import { lookup } from "@/lib/i18n/format";
+import { authErrorMessage, safeNext, type Translate } from "./errors";
+
+const t: Translate = (key, vars) => lookup(en, en, "en", key, vars);
 
 describe("safeNext", () => {
   it.each([
@@ -17,14 +21,14 @@ describe("safeNext", () => {
 
 describe("authErrorMessage", () => {
   it("stays silent when the person closes the Google window", () => {
-    expect(authErrorMessage({ code: "auth/popup-closed-by-user" })).toBeNull();
+    expect(authErrorMessage({ code: "auth/popup-closed-by-user" }, t)).toBeNull();
   });
 
   it("does not reveal whether an email is registered on sign-in", () => {
-    expect(authErrorMessage({ code: "auth/user-not-found" })).toBe(authErrorMessage({ code: "auth/wrong-password" }));
+    expect(authErrorMessage({ code: "auth/user-not-found" }, t)).toBe(authErrorMessage({ code: "auth/wrong-password" }, t));
   });
 
   it("has a fallback", () => {
-    expect(authErrorMessage(new Error("x"))).toMatch(/try again/);
+    expect(authErrorMessage(new Error("x"), t)).toMatch(/try again/);
   });
 });

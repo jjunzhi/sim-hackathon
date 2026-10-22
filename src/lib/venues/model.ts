@@ -46,6 +46,12 @@ export interface Venue {
   cultureTags: string[];
   wheelchairAccess: boolean;
   liftAccess: boolean;
+  /** Phase 6, all vendor-declared. */
+  stepFreeEntrance: boolean;
+  accessibleToilet: boolean;
+  accessibleParking: boolean;
+  /** Dietary ids from DIET_TAGS the venue says its menus can cover. */
+  menuOptions: string[];
   coverPhoto: StoredPhoto | null;
 }
 

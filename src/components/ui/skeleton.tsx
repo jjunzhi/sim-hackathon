@@ -1,4 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/cn";
+import { useT } from "@/lib/i18n/provider";
 
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
@@ -7,9 +10,10 @@ export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivEl
 }
 
 /** Placeholder rows for a loading list. Announces once via the label. */
-export function SkeletonList({ rows = 3, label = "Loading" }: { rows?: number; label?: string }) {
+export function SkeletonList({ rows = 3, label }: { rows?: number; label?: string }) {
+  const t = useT();
   return (
-    <div role="status" aria-label={label} className="flex flex-col gap-3">
+    <div role="status" aria-label={label ?? t("ui.skeleton.loading")} className="flex flex-col gap-3">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center gap-4 rounded-card border border-line bg-surface p-4">
           <Skeleton className="size-16 shrink-0 rounded-xl" />

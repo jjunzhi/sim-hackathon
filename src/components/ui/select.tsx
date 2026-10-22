@@ -4,6 +4,7 @@ import { Select as RSelect } from "radix-ui";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useId } from "react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/lib/i18n/provider";
 
 export interface SelectOption {
   value: string;
@@ -30,11 +31,12 @@ export function Select({
   value,
   defaultValue,
   onValueChange,
-  placeholder = "Choose one",
+  placeholder,
   hint,
   className,
   disabled,
 }: SelectProps) {
+  const t = useT();
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
   return (
@@ -51,7 +53,7 @@ export function Select({
             "transition-colors duration-150 hover:bg-subtle data-[placeholder]:text-muted disabled:opacity-55",
           )}
         >
-          <RSelect.Value placeholder={placeholder} />
+          <RSelect.Value placeholder={placeholder ?? t("common.chooseOne")} />
           <RSelect.Icon>
             <ChevronDown aria-hidden className="size-5 text-muted" />
           </RSelect.Icon>

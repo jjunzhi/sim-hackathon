@@ -1,0 +1,29 @@
+# Firebase App Hosting settings for the Next.js app (Phase 7). See README > Deploy.
+# Public config only here; secrets are referenced from Cloud Secret Manager, never written in this file.
+runConfig:
+  # 0 costs nothing when idle (first visit after a quiet spell is slower); set 1 to keep one warm. Raise maxInstances after the pilot.
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  # The app refuses emulator mode outside demo- projects; production must say false.
+  - variable: NEXT_PUBLIC_FIREBASE_USE_EMULATORS
+    value: "false"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION
+    value: asia-southeast1
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_PLAN_PRICE_CENTS
+    value: "3500"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_PLAN_PRICE_NOTE
+    value: No GST is charged on the plan.
+    availability: [BUILD, RUNTIME]
+  # Add your web app's Firebase config here (public values from Project settings > Your apps):
+  # NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  # NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, NEXT_PUBLIC_FIREBASE_APP_ID, NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY,
+  # and optionally NEXT_PUBLIC_MAPS_EMBED_KEY (referrer-restricted). Each with availability: [BUILD, RUNTIME].
+  # Until they are set, the app shows "Firebase is not configured" instead of running half-configured.

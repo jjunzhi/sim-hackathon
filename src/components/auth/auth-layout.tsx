@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/lib/i18n/provider";
 
 export function AuthLayout({ title, intro, children, footer }: { title: string; intro?: string; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
@@ -30,11 +33,12 @@ export function GoogleIcon() {
   );
 }
 
-export function Divider({ label = "or" }: { label?: string }) {
+export function Divider({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-3 text-small text-muted" role="separator">
       <span className="h-px flex-1 bg-line" />
-      {label}
+      {label ?? t("ui.divider.or")}
       <span className="h-px flex-1 bg-line" />
     </div>
   );

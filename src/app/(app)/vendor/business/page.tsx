@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Circle, CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,9 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
 import { BusinessFields } from "@/components/vendor/business-fields";
+import { BlockedDates } from "@/components/vendor/blocked-dates";
 import { TaxForm } from "@/components/vendor/tax-form";
+import { useBilling } from "@/lib/billing/use-billing";
 import { cn } from "@/lib/cn";
 import { updateVendor, watchItems, type BusinessInput } from "@/lib/data/vendors";
 import { watchMyVenues, watchPublishedVenues, type WithId } from "@/lib/data/venues";
@@ -37,6 +40,9 @@ function Business({ uid, profile }: { uid: string; profile: VendorProfile }) {
           <ServedVenues uid={uid} profile={profile} />
         </Section>
       )}
+      <Section title="Booked dates" intro="Dates you already have booked. Couples see them on your venue page and get a warning if they choose one.">
+        <BlockedDates uid={uid} />
+      </Section>
       <Section title="Publish" intro="Couples see your active items only once your business is published.">
         <PublishBusiness uid={uid} profile={profile} />
       </Section>
@@ -191,7 +197,10 @@ function PublishBusiness({ uid, profile }: { uid: string; profile: VendorProfile
 
   const hasItem = (items ?? []).some((i) => i.active && i.photo);
   const hasVenue = (venues ?? []).some((v) => v.status === "active");
-  const ready = hasItem || hasVenue;
+  // Couples find the business only while its plan is in good standing (Phase 7).
+  const { standing } = useBilling(uid);
+  const planOk = standing !== null && standing.kind !== "lapsed";
+  const ready = (hasItem || hasVenue) && planOk;
 
   async function set(published: boolean) {
     setBusy(true);
@@ -209,8 +218,19 @@ function PublishBusiness({ uid, profile }: { uid: string; profile: VendorProfile
     <div className="flex flex-col gap-4">
       <p className="flex items-center gap-3">
         {ready ? <CircleCheck aria-hidden className="size-5 text-success" /> : <Circle aria-hidden className="size-5 text-muted" />}
-        <span className={ready ? "text-ink" : "text-muted"}>At least one active item with a photo, or a published venue</span>
-        <span className="sr-only">{ready ? "(done)" : "(not done yet)"}</span>
+        <span className={hasItem || hasVenue ? "text-ink" : "text-muted"}>At least one active item with a photo, or a published venue</span>
+        <span className="sr-only">{hasItem || hasVenue ? "(done)" : "(not done yet)"}</span>
+      </p>
+      <p className="flex items-center gap-3">
+        {planOk ? <CircleCheck aria-hidden className="size-5 text-success" /> : <Circle aria-hidden className="size-5 text-muted" />}
+        <span className={planOk ? "text-ink" : "text-muted"}>
+          A pilot invite or the monthly plan (
+          <Link href="/vendor/billing" className="font-semibold text-accent-text underline underline-offset-4">
+            Plan and billing
+          </Link>
+          )
+        </span>
+        <span className="sr-only">{planOk ? "(done)" : "(not done yet)"}</span>
       </p>
       {profile.published ? (
         <Button onClick={() => set(false)} loading={busy} className="self-start">
