@@ -26,7 +26,21 @@ const signature = (r: RenderRequest) => JSON.stringify([r.venueId, r.spaceId, r.
  * Shows the real room decorated with only the selected items. Every render
  * carries the "AI illustration" note. Changing theme or items needs a new render.
  */
-export function RenderPanel({ request, roomPhoto, disabledReason }: { request: RenderRequest | null; roomPhoto: StoredPhoto | null; disabledReason?: string | null }) {
+export function RenderPanel({
+  request,
+  roomPhoto,
+  disabledReason,
+  onRendered,
+  actions,
+}: {
+  request: RenderRequest | null;
+  roomPhoto: StoredPhoto | null;
+  disabledReason?: string | null;
+  /** Called with each finished render (for saving it to a plan). */
+  onRendered?: (result: RenderResult) => void;
+  /** Extra buttons shown under a finished render, e.g. "Save this render". */
+  actions?: React.ReactNode;
+}) {
   const [raw, setState] = useState<State>({ kind: "idle" });
   const [details, setDetails] = useState(false);
   const detailsId = useId();
@@ -51,6 +65,7 @@ export function RenderPanel({ request, roomPhoto, disabledReason }: { request: R
       const result = await requestRender(request);
       const [renderUrl, roomUrl] = await Promise.all([photoUrl(result.path), photoUrl(roomPhoto.path)]);
       setState({ kind: "done", result, renderUrl, roomUrl, requestSig: signature(request), roomKey: `${request.venueId}/${request.spaceId}` });
+      onRendered?.(result);
     } catch (err) {
       setState({ kind: "error", message: err instanceof RenderError ? err.message : "We couldn't create this render. Please try again." });
     }
@@ -129,6 +144,7 @@ export function RenderPanel({ request, roomPhoto, disabledReason }: { request: R
             <p className="text-small text-muted">AI illustration. Final decor may differ.</p>
             {state.result.demo && <Badge tone="warning">DEMO: not an AI render</Badge>}
           </div>
+          {actions && !stale && <div className="flex flex-wrap gap-2">{actions}</div>}
           <button
             type="button"
             aria-expanded={details}

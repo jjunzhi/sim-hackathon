@@ -49,6 +49,21 @@ export const deletionSteps: Array<{ name: string; run: (ctx: DeletionContext) =>
     },
   },
   {
+    // Plans hold the couple's saved-render references; the shared render
+    // images themselves contain no personal data and stay in the cache.
+    name: "couple plans and saved renders",
+    run: async ({ uid, db }) => {
+      const plans = await db.collection("projects").where("ownerUid", "==", uid).get();
+      await Promise.all(plans.docs.map((d) => db.recursiveDelete(d.ref)));
+    },
+  },
+  {
+    name: "guest list",
+    run: async ({ uid, db }) => {
+      await db.recursiveDelete(db.collection("guestLists").doc(uid));
+    },
+  },
+  {
     name: "render usage counters",
     run: async ({ uid, db }) => {
       const usage = await db.collection("usage").where("subject", "==", uid).get();

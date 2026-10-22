@@ -125,13 +125,33 @@ describe("deleteAccount", () => {
     expect(await authUserExists(other.idToken)).toBe(true);
   });
 
-  it("removes a couple's profile and account", async () => {
+  it("removes a couple's profile, plans (with saved renders), guest list and account; nobody else's", async () => {
     const me = await signUp(`couple-${Date.now()}@example.test`);
+    const other = await signUp(`couple2-${Date.now()}@example.test`);
     await seedUser(env, me.uid, "couple");
+    await seedUser(env, other.uid, "couple");
+    const plan = (ownerUid: string) => ({
+      ownerUid, name: "SAMPLE plan", venueId: "v", spaceId: "s", tierKey: null, headcount: 100, themeId: "chinese",
+      selections: {}, savedRenders: [{ key: "k", path: "renders/k.jpg", themeId: "chinese", demo: true, savedAt: "2026-10-22T00:00:00Z" }],
+      createdAt: fixedTime, updatedAt: fixedTime,
+    });
+    await seed(env, "projects/mine1", plan(me.uid));
+    await seed(env, "projects/mine2", plan(me.uid));
+    await seed(env, "projects/theirs", plan(other.uid));
+    await seed(env, `guestLists/${me.uid}`, { trimOrder: ["casual", "close", "extended"], planId: null, updatedAt: fixedTime });
+    await seed(env, `guestLists/${me.uid}/parties/g1`, { label: "x", tier: "must", seats: 2, plusOnes: 0, createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `guestLists/${other.uid}/parties/g9`, { label: "y", tier: "must", seats: 2, plusOnes: 0, createdAt: fixedTime, updatedAt: fixedTime });
+
     const res = await callDelete(me.idToken);
     expect(res.result).toEqual({ deleted: true });
     expect(await docExists(`users/${me.uid}`)).toBe(false);
+    expect(await docExists("projects/mine1")).toBe(false);
+    expect(await docExists("projects/mine2")).toBe(false);
+    expect(await docExists(`guestLists/${me.uid}`)).toBe(false);
+    expect(await docExists(`guestLists/${me.uid}/parties/g1`)).toBe(false);
     expect(await authUserExists(me.idToken)).toBe(false);
+    expect(await docExists("projects/theirs")).toBe(true);
+    expect(await docExists(`guestLists/${other.uid}/parties/g9`)).toBe(true);
   });
 
   it("works for an account that never finished sign-up (no profile)", async () => {

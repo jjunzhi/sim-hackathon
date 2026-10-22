@@ -27,7 +27,8 @@ function SignUp() {
   const router = useRouter();
   const params = useSearchParams();
   const auth = useAuth();
-  const [role, setRole] = useState<Role | null>(params.get("role") === "vendor" ? "vendor" : null);
+  const presetRole = params.get("role");
+  const [role, setRole] = useState<Role | null>(presetRole === "vendor" || presetRole === "couple" ? presetRole : null);
   const [consent, setConsent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

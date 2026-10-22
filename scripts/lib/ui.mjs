@@ -43,6 +43,13 @@ export function ui(cdp) {
     await sleep(300);
   }
 
+  /** Click a link whose visible text matches exactly (first match). */
+  async function clickLink(text) {
+    await waitFor(`[...document.querySelectorAll('a')].some(a => a.textContent.trim() === ${js(text)})`, { what: `link "${text}"` });
+    await evaluate(`[...document.querySelectorAll('a')].find(a => a.textContent.trim() === ${js(text)}).click()`);
+    await sleep(500);
+  }
+
   /** Click a <label> (radio cards, chips) or a Radix checkbox by its label text. */
   async function clickLabel(text) {
     await evaluate(`(() => {
@@ -104,5 +111,5 @@ export function ui(cdp) {
 
   const text = () => evaluate("document.querySelector('main')?.innerText ?? ''");
 
-  return { evaluate, waitFor, waitForText, goto, fill, clickButton, clickLabel, select, press, setSlider, uploadSamplePhoto, text };
+  return { evaluate, waitFor, waitForText, goto, fill, clickButton, clickLink, clickLabel, select, press, setSlider, uploadSamplePhoto, text };
 }

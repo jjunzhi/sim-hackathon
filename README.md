@@ -2,7 +2,13 @@
 
 A Singapore wedding venue and decor platform. Vendors load their real spaces, decor and prices. Couples see their chosen room decorated with only items the vendor can deliver, and get an honest itemised estimate.
 
-**Status: Phase 3, AI render (server-side, cached, with limits and a DEMO mode).** Earlier, **Phase 2, inventory and estimate engine.** Builds on Phase 1 (auth, roles, PDPA consent, venue onboarding, photo uploads, security rules, account deletion). Phase 2 adds:
+**Status: Phase 4, the couple journey.** It covers:
+
+- the landing page and the venue catalog with filters;
+- venue pages and the Studio (room, guests, tiers, style, render, live estimate);
+- saved plans, the guest helper, and a print/PDF estimate.
+
+Earlier phases: **Phase 3**, the AI render (server-side, cached, with limits and a DEMO mode); **Phase 2**, inventory and the estimate engine. Builds on Phase 1 (auth, roles, PDPA consent, venue onboarding, photo uploads, security rules, account deletion). Phase 2 adds:
 
 - business profiles with decorator onboarding;
 - inventory and packages;
@@ -54,6 +60,24 @@ node scripts/e2e-phase2.mjs
 ```
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
+
+## Couple journey (Phase 4)
+
+- **Browsing needs no account.** Rendering and saving a plan need a couple account. A plan made before signing up survives the sign-up step. It's kept in this tab's `sessionStorage` until saved, and holds no personal data.
+- **Catalog filters:** guest count (one room must fit), wheelchair access, lift access, style and culture. The guest range and "from" price come from `capacitySummary`. The `venueCapacitySummary` Firestore trigger (asia-southeast1) writes it whenever a space changes, and vendors can't edit it.
+- **Studio steps:** Venue (room, Peak/Off-Peak, guests), Style (theme, items from the venue and from decorators who work there), Render, Estimate, and Share (coming in Phase 5).
+  - The guest slider runs from half the room's minimum to 30% above its maximum, with warnings either side.
+  - There's one estimate per vendor, plus the total across vendors.
+- **Plans** (`projects/{id}`) are owner-only, up to 10 per couple, and autosave. They hold up to 6 saved renders.
+- **Guest helper** (`guestLists/{uid}/parties`): a label, a tier, seats and plus-ones only, never contact details. It shows seats against the chosen plan's room and cost per guest. The trim suggestion follows the couple's own order and never suggests "Must invite". Nothing scores or rates people.
+- **Print:** `/plans/{id}/print` has an A4 print stylesheet with a white background and no navigation. Use the "Print or save as PDF" button.
+- **SAMPLE data for the emulators:** run `npm run seed` while `npm run emulators` is running. It only ever targets the local `demo-` project.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running):
+
+```bash
+node scripts/e2e-phase4.mjs
+```
 
 ## AI renders (Phase 3)
 

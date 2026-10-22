@@ -18,6 +18,7 @@
     "functions:install": "npm --prefix functions install",
     "functions:build": "npm --prefix functions run build",
     "emulators": "npm run functions:build && firebase emulators:start",
+    "seed": "node scripts/seed.mjs",
     "test:rules": "firebase emulators:exec --only firestore,storage \"vitest run --config vitest.emulator.config.mts tests/rules\"",
     "test:functions": "npm run functions:build && firebase emulators:exec --only auth,firestore,storage,functions \"vitest run --config vitest.emulator.config.mts tests/functions\"",
     "test:all": "npm test && npm run test:rules && npm run test:functions"

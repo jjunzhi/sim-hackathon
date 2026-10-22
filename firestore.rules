@@ -18,6 +18,12 @@ service cloud.firestore {
         && get(userPath(request.auth.uid)).data.role == 'vendor';
     }
 
+    function isCouple() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'couple';
+    }
+
     function isInt(v, lo, hi) {
       return v is int && v >= lo && v <= hi;
     }
@@ -78,10 +84,11 @@ service cloud.firestore {
 
     function validVenue(d, venueId) {
       // Tax settings live on the vendor's business profile, not the venue.
+      // capacitySummary is optional and written only by the server trigger.
       return d.keys().hasOnly([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
           'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
-          'createdAt', 'updatedAt'])
+          'capacitySummary', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
           'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
@@ -109,6 +116,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'draft'
         && request.resource.data.verified == false
+        && !('capacitySummary' in request.resource.data)
         && request.resource.data.createdAt == request.time
         && validVenue(request.resource.data, venueId);
 
@@ -117,6 +125,7 @@ service cloud.firestore {
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.verified == resource.data.verified
+        && request.resource.data.get('capacitySummary', null) == resource.data.get('capacitySummary', null)
         && request.resource.data.createdAt == resource.data.createdAt
         && validVenue(request.resource.data, venueId);
 
@@ -279,6 +288,68 @@ service cloud.firestore {
           && validPackage(request.resource.data)
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if ownsVendor();
+      }
+    }
+
+    // ---------- projects/{id}: a couple's saved plans (owner only) ----------
+    function validPlan(d) {
+      return d.keys().hasOnly([
+          'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
+          'selections', 'savedRenders', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll([
+          'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
+          'selections', 'savedRenders', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 80
+        && d.venueId is string && d.venueId.size() > 0 && d.venueId.size() <= 128
+        && (d.spaceId == null || (d.spaceId is string && d.spaceId.size() <= 128))
+        && d.tierKey in ['standard', 'peak', 'offPeak', null]
+        && isInt(d.headcount, 0, 7000)
+        && isText(d.themeId, 64)
+        && d.selections is map && d.selections.size() <= 60
+        && d.savedRenders is list && d.savedRenders.size() <= 6
+        && d.updatedAt == request.time;
+    }
+
+    match /projects/{projectId} {
+      allow read, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isCouple()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && validPlan(request.resource.data);
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validPlan(request.resource.data);
+    }
+
+    // ---------- guestLists/{uid}: the couple's own guest helper ----------
+    // Minimum data: a label the couple writes, a tier and seat counts. No contact details.
+    match /guestLists/{uid} {
+      function ownsList() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      allow read, delete: if ownsList();
+      allow create, update: if ownsList() && isCouple()
+        && request.resource.data.keys().hasOnly(['trimOrder', 'planId', 'updatedAt'])
+        && request.resource.data.trimOrder is list
+        && request.resource.data.trimOrder.size() == 3
+        && request.resource.data.trimOrder.hasAll(['casual', 'close', 'extended'])
+        && (request.resource.data.planId == null || isText(request.resource.data.planId, 128))
+        && request.resource.data.updatedAt == request.time;
+
+      match /parties/{partyId} {
+        allow read, delete: if ownsList();
+        allow create, update: if ownsList() && isCouple()
+          && request.resource.data.keys().hasOnly(['label', 'tier', 'seats', 'plusOnes', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['label', 'tier', 'seats', 'plusOnes', 'createdAt', 'updatedAt'])
+          && request.resource.data.label is string
+          && request.resource.data.label.size() > 0 && request.resource.data.label.size() <= 80
+          && request.resource.data.tier in ['must', 'extended', 'close', 'casual']
+          && isInt(request.resource.data.seats, 1, 30)
+          && isInt(request.resource.data.plusOnes, 0, 10)
+          && request.resource.data.updatedAt == request.time;
       }
     }
 

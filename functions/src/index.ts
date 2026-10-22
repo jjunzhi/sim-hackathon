@@ -9,6 +9,8 @@ import { defineSecret } from "firebase-functions/params";
 import { deletionSteps } from "./deletion.js";
 import { handleRenderRequest, parseRequest } from "./render/request-render.js";
 
+export { venueCapacitySummary } from "./venues/trigger.js";
+
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 // Empty, "demo" or "none" runs DEMO mode (no AI call, clearly labelled images).
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
