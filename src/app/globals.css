@@ -179,6 +179,53 @@
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
 }
 
+/* ---------- Print: clean A4, no navigation, no dark backgrounds ---------- */
+@page {
+  size: A4;
+  margin: 14mm 14mm 16mm;
+}
+
+@media print {
+  :root,
+  .vendor-dark {
+    /* Always print on white with the light palette. */
+    --bg-primary: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-subtle: #f4f0eb;
+    --text-primary: #1a1517;
+    --text-muted: #4a4245;
+    --border: #cfc6bd;
+    --shadow-soft: none;
+    --shadow-lift: none;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #1a1517;
+    font-size: 11pt;
+  }
+  header,
+  nav,
+  [role="region"][aria-label="Notification"],
+  .no-print {
+    display: none !important;
+  }
+  .print-doc {
+    max-width: none;
+    padding: 0;
+  }
+  .print-doc header {
+    display: flex !important;
+  }
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer::after {
     animation: none;

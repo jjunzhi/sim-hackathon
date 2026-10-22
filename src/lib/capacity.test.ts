@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkCapacity, tablesLine } from "./capacity";
+import { checkCapacity, clampHeadcount, sliderRange, tablesLine } from "./capacity";
 
 const room = { min: 80, max: 250 };
 
@@ -20,6 +20,20 @@ describe("checkCapacity", () => {
 
   it("rejects an invalid range", () => {
     expect(() => checkCapacity(100, { min: 300, max: 200 })).toThrow(RangeError);
+  });
+});
+
+describe("sliderRange and clampHeadcount", () => {
+  it("runs from half the minimum to 30% above the maximum", () => {
+    expect(sliderRange({ min: 80, max: 250 })).toEqual({ min: 40, max: 325 });
+    expect(sliderRange({ min: 1, max: 10 })).toEqual({ min: 1, max: 13 });
+    expect(sliderRange({ min: 75, max: 101 })).toEqual({ min: 37, max: 132 });
+  });
+
+  it("keeps a headcount inside the new room's slider", () => {
+    expect(clampHeadcount(500, { min: 80, max: 250 })).toBe(325);
+    expect(clampHeadcount(5, { min: 80, max: 250 })).toBe(40);
+    expect(clampHeadcount(185, { min: 80, max: 250 })).toBe(185);
   });
 });
 

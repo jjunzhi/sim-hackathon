@@ -116,6 +116,15 @@ export function parseDollarsToCents(input: string): Cents | null {
   return Number(cents);
 }
 
+/** Cents to an editable dollar string for form fields ("8000.00"). UI only. */
+export function centsToInput(amount: Cents | null): string {
+  if (amount === null) return "";
+  assertCents(amount);
+  const sign = amount < 0 ? "-" : "";
+  const abs = Math.abs(amount);
+  return `${sign}${Math.trunc(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}
+
 const formatters = new Map<string, Intl.NumberFormat>();
 
 /** UI-only formatting. Never feed the result back into calculations. */

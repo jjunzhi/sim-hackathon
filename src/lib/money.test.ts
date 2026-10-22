@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MoneyError,
   applyBps,
+  centsToInput,
   divideRoundHalfUp,
   formatBps,
   formatSGD,
@@ -155,6 +156,19 @@ describe("parseDollarsToCents", () => {
 
   it.each(["", "abc", "-5", "1.234", "1e3", "1.2.3"])("rejects %s", (input) => {
     expect(parseDollarsToCents(input)).toBeNull();
+  });
+});
+
+describe("centsToInput", () => {
+  it("round-trips with parseDollarsToCents", () => {
+    for (const c of [0, 5, 99, 100, 800_000, 123_456_789]) {
+      expect(parseDollarsToCents(centsToInput(c))).toBe(c);
+    }
+  });
+
+  it("is empty for no value", () => {
+    expect(centsToInput(null)).toBe("");
+    expect(centsToInput(5)).toBe("0.05");
   });
 });
 

@@ -1,0 +1,381 @@
+rules_version = '2';
+
+// Every rule here has a test in tests/rules/firestore.rules.test.ts.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function isVendor() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'vendor';
+    }
+
+    function isCouple() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'couple';
+    }
+
+    function isInt(v, lo, hi) {
+      return v is int && v >= lo && v <= hi;
+    }
+
+    function isText(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    // ---------- users/{uid}: role and PDPA consent, written once ----------
+    // Role is chosen at sign-up and can never be changed by the client.
+    // The profile is deleted only by the deleteAccount function (Admin SDK).
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['role', 'consent', 'createdAt'])
+        && request.resource.data.keys().hasAll(['role', 'consent', 'createdAt'])
+        && request.resource.data.role in ['couple', 'vendor']
+        && request.resource.data.consent.keys().hasOnly(['version', 'acceptedAt'])
+        && request.resource.data.consent.keys().hasAll(['version', 'acceptedAt'])
+        && request.resource.data.consent.version is string
+        && request.resource.data.consent.version.size() > 0
+        && request.resource.data.consent.version.size() <= 32
+        && request.resource.data.consent.acceptedAt == request.time
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // ---------- venues ----------
+    function validTags(t) {
+      return t is list && t.size() <= 12;
+    }
+
+    function validTax(t) {
+      return t is map
+        && t.keys().hasOnly(['serviceChargeBps', 'gstBps', 'noServiceChargeNote', 'noGstNote'])
+        && t.keys().hasAll(['serviceChargeBps', 'gstBps', 'noServiceChargeNote', 'noGstNote'])
+        && t.serviceChargeBps in [0, 1000]
+        && t.gstBps in [0, 900]
+        && isText(t.noServiceChargeNote, 200)
+        && isText(t.noGstNote, 200);
+    }
+
+    // folder: the Storage folder the photo must live in, e.g. "venues/abc".
+    function validPhoto(p, folder) {
+      return p == null || (
+        p is map
+        && p.keys().hasOnly(['path', 'width', 'height', 'contentType'])
+        && p.keys().hasAll(['path', 'width', 'height', 'contentType'])
+        && p.path is string
+        && p.path.matches(folder + '/[A-Za-z0-9/_-]+[.](webp|jpg)')
+        && isInt(p.width, 1, 4096)
+        && isInt(p.height, 1, 4096)
+        && p.contentType in ['image/webp', 'image/jpeg']
+      );
+    }
+
+    function validVenue(d, venueId) {
+      // Tax settings live on the vendor's business profile, not the venue.
+      // capacitySummary is optional and written only by the server trigger.
+      return d.keys().hasOnly([
+          'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
+          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
+          'capacitySummary', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll([
+          'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
+          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
+          'createdAt', 'updatedAt'])
+        && d.status in ['draft', 'active']
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+        && isText(d.address, 300)
+        && d.postalCode is string && d.postalCode.matches('([0-9]{6})?')
+        && isText(d.description, 2000)
+        && validTags(d.styleTags)
+        && validTags(d.cultureTags)
+        && d.wheelchairAccess is bool
+        && d.liftAccess is bool
+        && validPhoto(d.coverPhoto, 'venues/' + venueId)
+        && d.updatedAt == request.time;
+    }
+
+    match /venues/{venueId} {
+      // Public read only for active venues; owners always see their own.
+      allow read: if resource.data.status == 'active'
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+
+      // Only vendors create venues, always as an unverified draft they own.
+      allow create: if isVendor()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.verified == false
+        && !('capacitySummary' in request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && validVenue(request.resource.data, venueId);
+
+      // "verified" is admin-only: the client can never change it.
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.verified == resource.data.verified
+        && request.resource.data.get('capacitySummary', null) == resource.data.get('capacitySummary', null)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validVenue(request.resource.data, venueId);
+
+      // Venues are removed only by account deletion (Admin SDK).
+      allow delete: if false;
+
+      // ---------- spaces ----------
+      function venue() {
+        return get(/databases/$(database)/documents/venues/$(venueId)).data;
+      }
+
+      function ownsVenue() {
+        return signedIn() && venue().ownerUid == request.auth.uid;
+      }
+
+      function validTier(t) {
+        return t is map
+          && t.keys().hasOnly(['roomRentalCents', 'minimumSpendCents'])
+          && t.keys().hasAll(['roomRentalCents', 'minimumSpendCents'])
+          && isInt(t.roomRentalCents, 0, 100000000000)
+          && (t.minimumSpendCents == null || isInt(t.minimumSpendCents, 0, 100000000000));
+      }
+
+      // Either one standard price, or both Peak and Off-Peak.
+      function validTiers(t) {
+        return t is map && (
+          (t.keys().hasOnly(['standard']) && t.keys().hasAll(['standard']) && validTier(t.standard))
+          || (t.keys().hasOnly(['peak', 'offPeak']) && t.keys().hasAll(['peak', 'offPeak'])
+              && validTier(t.peak) && validTier(t.offPeak))
+        );
+      }
+
+      function validSpace(d) {
+        return d.keys().hasOnly([
+            'name', 'capacityMin', 'capacityMax', 'seatsPerTable', 'tiers', 'photo',
+            'photoVersion', 'sortOrder', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll([
+            'name', 'capacityMin', 'capacityMax', 'seatsPerTable', 'tiers', 'photo',
+            'photoVersion', 'sortOrder', 'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && isInt(d.capacityMin, 1, 5000)
+          && isInt(d.capacityMax, 1, 5000)
+          && d.capacityMin <= d.capacityMax
+          && isInt(d.seatsPerTable, 1, 30)
+          && validTiers(d.tiers)
+          && validPhoto(d.photo, 'venues/' + venueId)
+          && isInt(d.sortOrder, 0, 1000)
+          && d.updatedAt == request.time;
+      }
+
+      match /spaces/{spaceId} {
+        allow read: if venue().status == 'active' || ownsVenue();
+
+        allow create: if ownsVenue()
+          && validSpace(request.resource.data)
+          && request.resource.data.photoVersion == 0
+          && request.resource.data.createdAt == request.time;
+
+        // photoVersion only ever goes up by one (it feeds the render cache key).
+        allow update: if ownsVenue()
+          && validSpace(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt
+          && (request.resource.data.photoVersion == resource.data.photoVersion
+              || request.resource.data.photoVersion == resource.data.photoVersion + 1);
+
+        allow delete: if ownsVenue();
+      }
+    }
+
+    // ---------- vendors/{uid}: business profile, inventory, packages ----------
+    function validVendor(d) {
+      return d.keys().hasOnly([
+          'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
+          'published', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll([
+          'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
+          'published', 'createdAt', 'updatedAt'])
+        && d.kinds is list && d.kinds.size() >= 1 && d.kinds.size() <= 2
+        && d.kinds.hasOnly(['venue', 'decorator'])
+        && d.businessName is string && d.businessName.size() > 0 && d.businessName.size() <= 120
+        && isText(d.description, 2000)
+        && validTax(d.tax)
+        && d.servesAnyVenue is bool
+        && d.servesVenueIds is list && d.servesVenueIds.size() <= 50
+        && d.published is bool
+        && d.updatedAt == request.time;
+    }
+
+    function validPrice(p) {
+      return isInt(p, 0, 100000000000);
+    }
+
+    match /vendors/{uid} {
+      function ownsVendor() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      function vendorPublished() {
+        return get(/databases/$(database)/documents/vendors/$(uid)).data.published == true;
+      }
+
+      function vendorExists() {
+        return exists(/databases/$(database)/documents/vendors/$(uid));
+      }
+
+      allow read: if resource.data.published == true || ownsVendor();
+      allow create: if ownsVendor() && isVendor()
+        && validVendor(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if ownsVendor()
+        && validVendor(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      // Removed only by account deletion (Admin SDK).
+      allow delete: if false;
+
+      function validItem(d) {
+        return d.keys().hasOnly(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && d.category in ['Florals', 'Lighting', 'Backdrops and stage', 'Table decor', 'Furniture', 'Draping', 'Signage', 'Food and drink', 'Other']
+          && d.unit in ['piece', 'table', 'guest']
+          && validPrice(d.priceCents)
+          && isText(d.description, 1000)
+          && validPhoto(d.photo, 'vendors/' + uid)
+          && d.active is bool
+          && d.updatedAt == request.time;
+      }
+
+      function validPackage(d) {
+        return d.keys().hasOnly(['name', 'unit', 'priceCents', 'description', 'itemIds', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['name', 'unit', 'priceCents', 'description', 'itemIds', 'photo', 'active', 'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+          && d.unit in ['piece', 'table', 'guest']
+          && validPrice(d.priceCents)
+          && isText(d.description, 1000)
+          && d.itemIds is list && d.itemIds.size() >= 1 && d.itemIds.size() <= 30
+          && validPhoto(d.photo, 'vendors/' + uid)
+          && d.active is bool
+          && d.updatedAt == request.time;
+      }
+
+      // Couples see active items only once the business is published.
+      match /items/{itemId} {
+        allow read: if ownsVendor() || (resource.data.active == true && vendorPublished());
+        allow create: if ownsVendor() && vendorExists()
+          && validItem(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if ownsVendor()
+          && validItem(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if ownsVendor();
+      }
+
+      match /packages/{packageId} {
+        allow read: if ownsVendor() || (resource.data.active == true && vendorPublished());
+        allow create: if ownsVendor() && vendorExists()
+          && validPackage(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if ownsVendor()
+          && validPackage(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if ownsVendor();
+      }
+    }
+
+    // ---------- projects/{id}: a couple's saved plans (owner only) ----------
+    function validPlan(d) {
+      return d.keys().hasOnly([
+          'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
+          'selections', 'savedRenders', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll([
+          'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
+          'selections', 'savedRenders', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 80
+        && d.venueId is string && d.venueId.size() > 0 && d.venueId.size() <= 128
+        && (d.spaceId == null || (d.spaceId is string && d.spaceId.size() <= 128))
+        && d.tierKey in ['standard', 'peak', 'offPeak', null]
+        && isInt(d.headcount, 0, 7000)
+        && isText(d.themeId, 64)
+        && d.selections is map && d.selections.size() <= 60
+        && d.savedRenders is list && d.savedRenders.size() <= 6
+        && d.updatedAt == request.time;
+    }
+
+    match /projects/{projectId} {
+      allow read, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isCouple()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && validPlan(request.resource.data);
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validPlan(request.resource.data);
+    }
+
+    // ---------- guestLists/{uid}: the couple's own guest helper ----------
+    // Minimum data: a label the couple writes, a tier and seat counts. No contact details.
+    match /guestLists/{uid} {
+      function ownsList() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      allow read, delete: if ownsList();
+      allow create, update: if ownsList() && isCouple()
+        && request.resource.data.keys().hasOnly(['trimOrder', 'planId', 'updatedAt'])
+        && request.resource.data.trimOrder is list
+        && request.resource.data.trimOrder.size() == 3
+        && request.resource.data.trimOrder.hasAll(['casual', 'close', 'extended'])
+        && (request.resource.data.planId == null || isText(request.resource.data.planId, 128))
+        && request.resource.data.updatedAt == request.time;
+
+      match /parties/{partyId} {
+        allow read, delete: if ownsList();
+        allow create, update: if ownsList() && isCouple()
+          && request.resource.data.keys().hasOnly(['label', 'tier', 'seats', 'plusOnes', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['label', 'tier', 'seats', 'plusOnes', 'createdAt', 'updatedAt'])
+          && request.resource.data.label is string
+          && request.resource.data.label.size() > 0 && request.resource.data.label.size() <= 80
+          && request.resource.data.tier in ['must', 'extended', 'close', 'casual']
+          && isInt(request.resource.data.seats, 1, 30)
+          && isInt(request.resource.data.plusOnes, 0, 10)
+          && request.resource.data.updatedAt == request.time;
+      }
+    }
+
+    // ---------- renders (written only by the requestRender function) ----------
+    // No personal data; shared between couples. Family members viewing a share
+    // link sign in anonymously, which counts as signed in.
+    match /renders/{key} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Render usage counters: each person sees only their own (vendors see their venue's).
+    match /usage/{id} {
+      allow read: if signedIn() && resource.data.subject == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Render limits are not secret; only an admin changes them (console / Admin SDK).
+    match /config/renderLimits {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

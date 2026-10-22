@@ -1,0 +1,22 @@
+{
+  "name": "weddingvista-functions",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "2.30.0",
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

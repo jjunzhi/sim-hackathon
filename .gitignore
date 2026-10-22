@@ -14,6 +14,13 @@ next-env.d.ts
 
 # firebase
 .firebase/
+functions/lib/
+# Local secret overrides for the Functions emulator (may hold a real Gemini key)
+functions/.secret.local
+.emulator-data/
+pglite-debug.log
+database-debug.log
+storage-debug.log
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*

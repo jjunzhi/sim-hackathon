@@ -15,6 +15,10 @@ export interface JourneyStepperProps {
   current: number;
   /** When provided, completed and current steps become buttons. */
   onStepChange?: (index: number) => void;
+  /** Also let people jump ahead (editing flows where order doesn't matter). */
+  allowForward?: boolean;
+  /** Accessible name for the navigation landmark. */
+  label?: string;
   className?: string;
 }
 
@@ -22,12 +26,19 @@ export interface JourneyStepperProps {
  * Desktop: full labelled row. Mobile: compact bar with the current step name,
  * meant to sit in a sticky bottom area so nothing scrolls sideways.
  */
-export function JourneyStepper({ steps, current, onStepChange, className }: JourneyStepperProps) {
+export function JourneyStepper({
+  steps,
+  current,
+  onStepChange,
+  allowForward,
+  label = "Planning steps",
+  className,
+}: JourneyStepperProps) {
   const progress = steps.length > 1 ? current / (steps.length - 1) : 1;
   const currentStep = steps[current];
 
   return (
-    <nav aria-label="Planning steps" className={cn("w-full", className)}>
+    <nav aria-label={label} className={cn("w-full", className)}>
       {/* Mobile compact */}
       <div className="flex flex-col gap-2 sm:hidden">
         <p className="flex items-baseline justify-between text-small">
@@ -64,7 +75,7 @@ export function JourneyStepper({ steps, current, onStepChange, className }: Jour
         <ol className="relative grid" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
           {steps.map((step, i) => {
             const state = i < current ? "done" : i === current ? "current" : "upcoming";
-            const clickable = onStepChange && i <= current;
+            const clickable = onStepChange && (allowForward || i <= current);
             const dot = (
               <span
                 className={cn(
