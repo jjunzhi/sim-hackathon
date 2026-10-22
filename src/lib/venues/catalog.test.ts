@@ -14,6 +14,10 @@ const venue = (o: Partial<CatalogVenue> = {}): CatalogVenue => ({
   cultureTags: ["Malay", "Chinese"],
   wheelchairAccess: true,
   liftAccess: false,
+  stepFreeEntrance: true,
+  accessibleToilet: false,
+  accessibleParking: false,
+  menuOptions: ["halal", "vegetarian"],
   coverPhoto: null,
   capacitySummary: {
     min: 30,
@@ -48,7 +52,19 @@ describe("matchesFilters", () => {
     expect(matchesFilters(venue(), { ...NO_FILTERS, styles: ["Rooftop"] })).toBe(false);
   });
 
+  it("Phase 6 access fields and menus are vendor statements; missing fields count as not listed", () => {
+    expect(matchesFilters(venue(), { ...NO_FILTERS, stepFree: true })).toBe(true);
+    expect(matchesFilters(venue(), { ...NO_FILTERS, toilet: true })).toBe(false);
+    expect(matchesFilters(venue(), { ...NO_FILTERS, menus: ["halal"] })).toBe(true);
+    expect(matchesFilters(venue(), { ...NO_FILTERS, menus: ["halal", "vegan"] })).toBe(false);
+    const legacy = venue({ stepFreeEntrance: undefined, menuOptions: undefined } as Partial<CatalogVenue>);
+    expect(matchesFilters(legacy, { ...NO_FILTERS, stepFree: true })).toBe(false);
+    expect(matchesFilters(legacy, { ...NO_FILTERS, menus: ["halal"] })).toBe(false);
+    expect(matchesFilters(legacy, NO_FILTERS)).toBe(true);
+  });
+
   it("counts active filters", () => {
     expect(activeFilterCount({ ...NO_FILTERS, guests: 100, lift: true, styles: ["Garden"] })).toBe(3);
+    expect(activeFilterCount({ ...NO_FILTERS, stepFree: true, parking: true, menus: ["halal", "vegan"] })).toBe(4);
   });
 });

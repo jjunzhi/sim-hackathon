@@ -7,6 +7,7 @@ import { ChipGroup } from "@/components/ui/chip-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { VenueProfileInput } from "@/lib/data/venues";
+import { DIET_TAGS } from "@/lib/venues/inclusion";
 import { CULTURE_TAGS, LIMITS, STYLE_TAGS } from "@/lib/venues/model";
 import { hasErrors, validateVenueProfile, type Errors } from "@/lib/venues/validation";
 
@@ -19,9 +20,13 @@ export const emptyVenueProfile: VenueProfileInput = {
   cultureTags: [],
   wheelchairAccess: false,
   liftAccess: false,
+  stepFreeEntrance: false,
+  accessibleToilet: false,
+  accessibleParking: false,
+  menuOptions: [],
 };
 
-/** Only the fields this form edits (never ownerUid, verified, status, timestamps). */
+/** Only the fields this form edits (never ownerUid, verified, status, timestamps). Venues from before Phase 6 lack the new fields. */
 export function pickProfile(v: VenueProfileInput): VenueProfileInput {
   return {
     name: v.name,
@@ -32,8 +37,14 @@ export function pickProfile(v: VenueProfileInput): VenueProfileInput {
     cultureTags: v.cultureTags,
     wheelchairAccess: v.wheelchairAccess,
     liftAccess: v.liftAccess,
+    stepFreeEntrance: v.stepFreeEntrance ?? false,
+    accessibleToilet: v.accessibleToilet ?? false,
+    accessibleParking: v.accessibleParking ?? false,
+    menuOptions: v.menuOptions ?? [],
   };
 }
+
+const DIET_LABELS: Record<string, string> = { halal: "Halal", vegetarian: "Vegetarian", vegan: "Vegan", "no-beef": "No beef", "no-pork": "No pork" };
 
 export function VenueDetailsForm({
   initial,
@@ -97,7 +108,19 @@ export function VenueDetailsForm({
         <legend className="mb-1 text-small font-semibold text-ink">Access</legend>
         <Checkbox label="Wheelchair access" description="Step-free from the entrance to the event space and toilets." checked={v.wheelchairAccess} onCheckedChange={(c) => set("wheelchairAccess", c)} />
         <Checkbox label="Lift access" checked={v.liftAccess} onCheckedChange={(c) => set("liftAccess", c)} />
+        <Checkbox label="Step-free entrance" description="No steps between the street or drop-off point and the door." checked={v.stepFreeEntrance} onCheckedChange={(c) => set("stepFreeEntrance", c)} />
+        <Checkbox label="Accessible toilet" checked={v.accessibleToilet} onCheckedChange={(c) => set("accessibleToilet", c)} />
+        <Checkbox label="Accessible parking" checked={v.accessibleParking} onCheckedChange={(c) => set("accessibleParking", c)} />
+        <p className="mt-1 text-small text-muted">Couples filter by these, so tick only what is really in place. They are shown as your statement.</p>
       </fieldset>
+      <ChipGroup
+        legend="Menus you can cater for"
+        options={DIET_TAGS}
+        label={(o) => DIET_LABELS[o] ?? o}
+        value={v.menuOptions}
+        onChange={(m) => set("menuOptions", m)}
+      />
+      <p className="-mt-3 text-small text-muted">Shown to couples as your statement. If your kitchen or caterer is halal-certified, couples can check the certificate on the MUIS halal search.</p>
       {formError && (
         <p role="alert" className="text-small font-medium text-error">
           {formError}

@@ -7,6 +7,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
 import { BusinessFields } from "@/components/vendor/business-fields";
+import { BlockedDates } from "@/components/vendor/blocked-dates";
 import { TaxForm } from "@/components/vendor/tax-form";
 import { cn } from "@/lib/cn";
 import { updateVendor, watchItems, type BusinessInput } from "@/lib/data/vendors";
@@ -37,6 +38,9 @@ function Business({ uid, profile }: { uid: string; profile: VendorProfile }) {
           <ServedVenues uid={uid} profile={profile} />
         </Section>
       )}
+      <Section title="Booked dates" intro="Dates you already have booked. Couples see them on your venue page and get a warning if they choose one.">
+        <BlockedDates uid={uid} />
+      </Section>
       <Section title="Publish" intro="Couples see your active items only once your business is published.">
         <PublishBusiness uid={uid} profile={profile} />
       </Section>

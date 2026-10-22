@@ -1,13 +1,20 @@
 "use client";
 
 import { ImageOff } from "lucide-react";
+import { useState } from "react";
 import { StorageImage } from "@/components/photos/storage-image";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ChipGroup } from "@/components/ui/chip-group";
 import { Input } from "@/components/ui/input";
-import { UNIT_LABELS } from "@/lib/inventory/model";
+import { useT } from "@/lib/i18n/provider";
+import type { Unit } from "@/lib/inventory/model";
 import { formatSGD } from "@/lib/money";
 import type { VendorCatalog } from "@/lib/plans/estimates";
 import { selectionKey } from "@/lib/plans/model";
+import { matchesDiet } from "@/lib/venues/diet-filter";
+import { DIET_KEYS, DIET_TAGS, type DietTag } from "@/lib/venues/inclusion";
+
+const UNIT_KEYS = { piece: "unit.perPiece", table: "unit.perTable", guest: "unit.perGuest" } as const satisfies Record<Unit, string>;
 
 /**
  * Only items vendors can really deliver: the venue's own decor, then each
@@ -25,6 +32,13 @@ export function ItemPicker({
   selections: Record<string, number>;
   onChange: (next: Record<string, number>) => void;
 }) {
+  const t = useT();
+  const unitLabel = (u: Unit) => t(UNIT_KEYS[u]);
+  // A browsing aid, not saved: chosen items stay chosen even if a filter would hide them.
+  const [diet, setDiet] = useState<string[]>([]);
+  const dietLabel = (o: string) => t(DIET_KEYS[o as DietTag]);
+  const hasFood = catalogs.some((c) => c.items.some((i) => i.category === "Food and drink"));
+  const hidden = catalogs.reduce((n, c) => n + c.items.filter((i) => !matchesDiet(i, diet) && selections[selectionKey("item", c.uid, i.id)] === undefined).length, 0);
   function toggle(key: string, on: boolean, includes: string[] = []) {
     const next = { ...selections };
     if (on) {
@@ -38,6 +52,14 @@ export function ItemPicker({
 
   return (
     <div className="flex flex-col gap-8">
+      {hasFood && (
+        <div className="flex flex-col gap-1">
+          <ChipGroup legend={t("studio.dietaryFilter")} options={DIET_TAGS} label={dietLabel} value={diet} onChange={setDiet} />
+          <p className="text-small text-muted" aria-live="polite">
+            {hidden > 0 ? t("studio.dietaryHidden", { count: hidden }) : ""} {t("access.asStated")}
+          </p>
+        </div>
+      )}
       {ordered.map((cat) => {
         const isVenue = cat.uid === venueOwnerUid;
         const chosenPackages = cat.packages.filter((p) => selections[selectionKey("package", cat.uid, p.id)] !== undefined);
@@ -47,13 +69,15 @@ export function ItemPicker({
           <fieldset key={cat.uid} className="flex flex-col gap-2">
             <legend className="mb-2 flex flex-col">
               <span className="font-display text-h3">{cat.profile.businessName}</span>
-              <span className="text-small text-muted">{isVenue ? "The venue's own decor" : "Decorator who works at this venue"}</span>
+              <span className="text-small text-muted">{isVenue ? t("studio.venueOwnDecor") : t("studio.decoratorAtVenue")}</span>
             </legend>
             <ul className="grid gap-3 md:grid-cols-2">
               {cat.items.map((i) => {
                 const key = selectionKey("item", cat.uid, i.id);
                 const pkg = lockedBy(i.id);
                 const on = selections[key] !== undefined;
+                if (!on && !matchesDiet(i, diet)) return null;
+                const tags = i.dietaryTags ?? [];
                 return (
                   <li key={i.id} className="flex gap-3 rounded-xl border border-line bg-surface p-3">
                     <div className="w-20 shrink-0">
@@ -68,14 +92,27 @@ export function ItemPicker({
                     <div className="flex flex-1 flex-col">
                       <Checkbox
                         label={i.name}
-                        description={pkg ? `Included in ${pkg.name}` : `${formatSGD(i.priceCents)} ${UNIT_LABELS[i.unit]}${i.photo ? "" : " · not shown in renders"}`}
+                        description={
+                          pkg
+                            ? t("studio.includedIn", { package: pkg.name })
+                            : t(i.photo ? "studio.priceUnit" : "studio.priceUnitNoRender", { price: formatSGD(i.priceCents), unit: unitLabel(i.unit) })
+                        }
                         checked={on || !!pkg}
                         disabled={!!pkg}
                         onCheckedChange={(c) => toggle(key, c)}
                       />
+                      {tags.length > 0 && (
+                        <ul className="ml-9 flex flex-wrap gap-1" aria-label={t("studio.dietaryFilter")}>
+                          {tags.map((tag) => (
+                            <li key={tag} className="rounded-full bg-subtle px-2 py-0.5 text-small">
+                              {dietLabel(tag)}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {on && i.unit === "piece" && (
                         <Input
-                          label={`How many: ${i.name}`}
+                          label={t("studio.howMany", { item: i.name })}
                           inputMode="numeric"
                           className="num w-40"
                           value={String(selections[key])}
@@ -96,8 +133,8 @@ export function ItemPicker({
                 return (
                   <li key={p.id} className="rounded-xl border border-gold bg-surface p-3">
                     <Checkbox
-                      label={`${p.name} (package)`}
-                      description={`${formatSGD(p.priceCents)} ${UNIT_LABELS[p.unit]} · includes ${names.join(", ") || "items"}`}
+                      label={t("studio.packageName", { name: p.name })}
+                      description={t("studio.packageDesc", { price: formatSGD(p.priceCents), unit: unitLabel(p.unit), items: names.join(", ") || t("studio.items") })}
                       checked={selections[key] !== undefined}
                       onCheckedChange={(c) => toggle(key, c, includes)}
                     />

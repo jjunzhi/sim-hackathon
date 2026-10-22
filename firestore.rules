@@ -37,6 +37,11 @@ service cloud.firestore {
       return v is string && v.size() <= max;
     }
 
+    // YYYY-MM-DD; the client checks the calendar, the rule checks the shape.
+    function isIsoDate(v) {
+      return v is string && v.matches('[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])');
+    }
+
     // ---------- users/{uid}: role and PDPA consent, written once ----------
     // Role is chosen at sign-up and can never be changed by the client.
     // The profile is deleted only by the deleteAccount function (Admin SDK).
@@ -56,12 +61,22 @@ service cloud.firestore {
         && request.resource.data.consent.acceptedAt == request.time
         && request.resource.data.createdAt == request.time;
 
-      allow update, delete: if false;
+      // The reader's language is the one thing a user may change later (Phase 6).
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['locale'])
+        && request.resource.data.locale in ['en', 'zh', 'ms', 'ta'];
+      allow delete: if false;
     }
 
     // ---------- venues ----------
     function validTags(t) {
       return t is list && t.size() <= 12;
+    }
+
+    // Vendor-declared dietary coverage (Phase 6): ids only, each at most once.
+    function validDietTags(t) {
+      return t is list && t.size() <= 5 && t.toSet().size() == t.size()
+        && t.hasOnly(['halal', 'vegetarian', 'vegan', 'no-beef', 'no-pork']);
     }
 
     function validTax(t) {
@@ -93,7 +108,8 @@ service cloud.firestore {
       // capacitySummary is optional and written only by the server trigger.
       return d.keys().hasOnly([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
-          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
+          'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess',
+          'stepFreeEntrance', 'accessibleToilet', 'accessibleParking', 'menuOptions', 'coverPhoto',
           'capacitySummary', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
@@ -108,6 +124,11 @@ service cloud.firestore {
         && validTags(d.cultureTags)
         && d.wheelchairAccess is bool
         && d.liftAccess is bool
+        // Phase 6 fields are optional so venues saved earlier can still be updated.
+        && d.get('stepFreeEntrance', false) is bool
+        && d.get('accessibleToilet', false) is bool
+        && d.get('accessibleParking', false) is bool
+        && validDietTags(d.get('menuOptions', []))
         && validPhoto(d.coverPhoto, 'venues/' + venueId)
         && d.updatedAt == request.time;
     }
@@ -248,7 +269,7 @@ service cloud.firestore {
       allow delete: if false;
 
       function validItem(d) {
-        return d.keys().hasOnly(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
+        return d.keys().hasOnly(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'dietaryTags', 'createdAt', 'updatedAt'])
           && d.keys().hasAll(['name', 'category', 'unit', 'priceCents', 'description', 'photo', 'active', 'createdAt', 'updatedAt'])
           && d.name is string && d.name.size() > 0 && d.name.size() <= 120
           && d.category in ['Florals', 'Lighting', 'Backdrops and stage', 'Table decor', 'Furniture', 'Draping', 'Signage', 'Food and drink', 'Other']
@@ -257,6 +278,7 @@ service cloud.firestore {
           && isText(d.description, 1000)
           && validPhoto(d.photo, 'vendors/' + uid)
           && d.active is bool
+          && validDietTags(d.get('dietaryTags', []))
           && d.updatedAt == request.time;
       }
 
@@ -295,13 +317,27 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if ownsVendor();
       }
+
+      // Dates the vendor already has booked (Phase 6). Public once published, like items.
+      match /blockedDates/{dateId} {
+        allow read: if ownsVendor() || vendorPublished();
+        allow create: if ownsVendor() && vendorExists()
+          && request.resource.data.keys().hasOnly(['date', 'note', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['date', 'note', 'createdAt', 'updatedAt'])
+          && isIsoDate(request.resource.data.date)
+          && isText(request.resource.data.note, 80)
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if false;
+        allow delete: if ownsVendor();
+      }
     }
 
     // ---------- projects/{id}: a couple's saved plans (owner only) ----------
     function validPlan(d) {
       return d.keys().hasOnly([
           'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
-          'selections', 'savedRenders', 'createdAt', 'updatedAt'])
+          'selections', 'savedRenders', 'weddingDate', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
           'selections', 'savedRenders', 'createdAt', 'updatedAt'])
@@ -313,6 +349,7 @@ service cloud.firestore {
         && isText(d.themeId, 64)
         && d.selections is map && d.selections.size() <= 60
         && d.savedRenders is list && d.savedRenders.size() <= 6
+        && (d.get('weddingDate', null) == null || isIsoDate(d.weddingDate))
         && d.updatedAt == request.time;
     }
 
@@ -516,5 +553,31 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+    // ---------- checklists/{uid}: ritual checklist ticks and the couple's own items (Phase 6) ----------
+    match /checklists/{uid} {
+      function ownsChecklist() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      allow read, delete: if ownsChecklist();
+      allow create, update: if ownsChecklist() && isCouple()
+        && request.resource.data.keys().hasOnly(['ticks', 'updatedAt'])
+        && request.resource.data.ticks is map
+        && request.resource.data.ticks.size() <= 400
+        && request.resource.data.updatedAt == request.time;
+
+      match /items/{itemId} {
+        allow read, delete: if ownsChecklist();
+        allow create, update: if ownsChecklist() && isCouple()
+          && request.resource.data.keys().hasOnly(['ritualId', 'text', 'done', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['ritualId', 'text', 'done', 'createdAt', 'updatedAt'])
+          && request.resource.data.ritualId in ['tea', 'nikah', 'vivaha', 'rom']
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 120
+          && request.resource.data.done is bool
+          && request.resource.data.updatedAt == request.time;
+      }
+    }
+
   }
 }

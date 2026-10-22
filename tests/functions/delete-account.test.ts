@@ -91,6 +91,7 @@ describe("deleteAccount", () => {
 
     await seedVendor(env, me.uid, true);
     await seed(env, `vendors/${me.uid}/items/i1`, { ...newItem(), createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `vendors/${me.uid}/blockedDates/b1`, { date: "2027-05-15", note: "", createdAt: fixedTime, updatedAt: fixedTime });
     await seed(env, `vendors/${me.uid}/packages/p1`, { ...newPackage({ itemIds: ["i1"] }), createdAt: fixedTime, updatedAt: fixedTime });
     await putFile(`vendors/${me.uid}/items/i1/x.webp`);
 
@@ -113,6 +114,7 @@ describe("deleteAccount", () => {
     expect(await docExists(`vendors/${me.uid}`)).toBe(false);
     expect(await docExists(`vendors/${me.uid}/items/i1`)).toBe(false);
     expect(await docExists(`vendors/${me.uid}/packages/p1`)).toBe(false);
+    expect(await docExists(`vendors/${me.uid}/blockedDates/b1`)).toBe(false);
     expect(await fileExists(`vendors/${me.uid}/items/i1/x.webp`)).toBe(false);
     expect(await authUserExists(me.idToken)).toBe(false);
 
@@ -141,6 +143,9 @@ describe("deleteAccount", () => {
     await seed(env, `guestLists/${me.uid}`, { trimOrder: ["casual", "close", "extended"], planId: null, updatedAt: fixedTime });
     await seed(env, `guestLists/${me.uid}/parties/g1`, { label: "x", tier: "must", seats: 2, plusOnes: 0, createdAt: fixedTime, updatedAt: fixedTime });
     await seed(env, `guestLists/${other.uid}/parties/g9`, { label: "y", tier: "must", seats: 2, plusOnes: 0, createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `checklists/${me.uid}`, { ticks: { "tea.order": true }, updatedAt: fixedTime });
+    await seed(env, `checklists/${me.uid}/items/c1`, { ritualId: "tea", text: "SAMPLE own item", done: false, createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, `checklists/${other.uid}`, { ticks: { "rom.rings": true }, updatedAt: fixedTime });
 
     const res = await callDelete(me.idToken);
     expect(res.result).toEqual({ deleted: true });
@@ -149,9 +154,12 @@ describe("deleteAccount", () => {
     expect(await docExists("projects/mine2")).toBe(false);
     expect(await docExists(`guestLists/${me.uid}`)).toBe(false);
     expect(await docExists(`guestLists/${me.uid}/parties/g1`)).toBe(false);
+    expect(await docExists(`checklists/${me.uid}`)).toBe(false);
+    expect(await docExists(`checklists/${me.uid}/items/c1`)).toBe(false);
     expect(await authUserExists(me.idToken)).toBe(false);
     expect(await docExists("projects/theirs")).toBe(true);
     expect(await docExists(`guestLists/${other.uid}/parties/g9`)).toBe(true);
+    expect(await docExists(`checklists/${other.uid}`)).toBe(true);
   });
 
   it("couple: links and votes go; unconfirmed leads go; confirmed leads keep the snapshot without contact or plan (option B)", async () => {

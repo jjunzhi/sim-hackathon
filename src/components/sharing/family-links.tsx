@@ -17,18 +17,20 @@ import { createShare, deleteShare, revokeShare, shareUrl, watchMyShares, type Sh
 import { formatSGD } from "@/lib/money";
 import { slideDown } from "@/lib/motion";
 import { usePlanEstimate } from "@/lib/plans/use-plan-estimate";
-import { themeLabel } from "@/lib/render/themes";
+import { useT } from "@/lib/i18n/provider";
+import { themeLabelT } from "@/lib/render/themes";
 import { SHARE_LIMITS, type ShareOption } from "@/lib/sharing/model";
 import { optionLetter, ShareResults } from "./share-results";
 
 /** Create family links from saved renders in any plan, and see what family think. */
 export function FamilyLinks({ uid }: { uid: string }) {
   const toast = useToast();
+  const t = useT();
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [shares, setShares] = useState<ShareRow[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [chosen, setChosen] = useState<ShareOption[]>([]);
-  const [title, setTitle] = useState("Which do you like best?");
+  const [title, setTitle] = useState(() => t("sharing.defaultQuestion"));
   const [busy, setBusy] = useState(false);
   const [revoking, setRevoking] = useState<ShareRow | null>(null);
   const [removing, setRemoving] = useState<ShareRow | null>(null);
@@ -51,11 +53,11 @@ export function FamilyLinks({ uid }: { uid: string }) {
     try {
       const id = await createShare(uid, title.trim().slice(0, SHARE_LIMITS.titleMax), chosen);
       await navigator.clipboard?.writeText(shareUrl(id)).catch(() => undefined);
-      toast({ title: "Family link created", description: "The link is copied. Paste it into your family chat.", tone: "success" });
+      toast({ title: t("sharing.created"), description: t("sharing.createdDescription"), tone: "success" });
       setCreating(false);
       setChosen([]);
     } catch {
-      toast({ title: "We couldn't create the link", tone: "error" });
+      toast({ title: t("sharing.createError"), tone: "error" });
     } finally {
       setBusy(false);
     }
@@ -65,26 +67,26 @@ export function FamilyLinks({ uid }: { uid: string }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="text-h2">Family links</h2>
-          <p className="max-w-2xl text-muted">Put 2 or 3 saved renders side by side. Family vote without an account; only you see the results.</p>
+          <h2 className="text-h2">{t("sharing.title")}</h2>
+          <p className="max-w-2xl text-muted">{t("sharing.subtitle")}</p>
         </div>
         {!creating && (
           <Button variant="primary" disabled={renderCount < 2} onClick={() => setCreating(true)} icon={<Plus aria-hidden className="size-4" />}>
-            Create a family link
+            {t("sharing.create")}
           </Button>
         )}
       </div>
-      {renderCount < 2 && <p className="text-small text-muted">Save at least two renders in your plans first (in the Studio&apos;s Render step).</p>}
+      {renderCount < 2 && <p className="text-small text-muted">{t("sharing.needTwo")}</p>}
 
       <AnimatePresence initial={false}>
         {creating && (
           <motion.div variants={slideDown} initial="hidden" animate="visible" exit="exit">
             <Card>
               <CardBody className="flex flex-col gap-5">
-                <Input label="Question for family" value={title} maxLength={SHARE_LIMITS.titleMax} onChange={(e) => setTitle(e.target.value)} />
+                <Input label={t("sharing.questionLabel")} value={title} maxLength={SHARE_LIMITS.titleMax} onChange={(e) => setTitle(e.target.value)} />
                 <fieldset className="flex flex-col gap-4">
                   <legend className="mb-1 text-small font-semibold">
-                    Choose 2 or 3 renders <span className="num font-normal text-muted">({chosen.length} chosen)</span>
+                    {t("sharing.chooseRenders")} <span className="num font-normal text-muted">{t("sharing.chosen", { count: chosen.length })}</span>
                   </legend>
                   {plans
                     .filter((p) => p.savedRenders.length)
@@ -94,10 +96,10 @@ export function FamilyLinks({ uid }: { uid: string }) {
                 </fieldset>
                 <div className="flex flex-wrap gap-3">
                   <Button variant="primary" loading={busy} disabled={chosen.length < SHARE_LIMITS.minOptions || !title.trim()} onClick={create}>
-                    Create link
+                    {t("sharing.createLink")}
                   </Button>
                   <Button onClick={() => setCreating(false)} disabled={busy}>
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                 </div>
               </CardBody>
@@ -107,8 +109,8 @@ export function FamilyLinks({ uid }: { uid: string }) {
       </AnimatePresence>
 
       {shares?.length === 0 && !creating && (
-        <EmptyState icon={<Users aria-hidden className="size-8" />} title="No family links yet">
-          Links stay private: only people you send them to can open them, and you can turn a link off at any time.
+        <EmptyState icon={<Users aria-hidden className="size-8" />} title={t("sharing.emptyTitle")}>
+          {t("sharing.emptyBody")}
         </EmptyState>
       )}
       <ul className="flex flex-col gap-4">
@@ -117,23 +119,23 @@ export function FamilyLinks({ uid }: { uid: string }) {
             <Card>
               <CardBody className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-h3">{s.status === "active" ? s.title : "Turned-off link"}</h3>
-                  {s.status === "active" ? <Badge tone="confirmed">Active</Badge> : <Badge tone="neutral">Turned off</Badge>}
+                  <h3 className="text-h3">{s.status === "active" ? s.title : t("sharing.turnedOffLink")}</h3>
+                  {s.status === "active" ? <Badge tone="confirmed">{t("sharing.active")}</Badge> : <Badge tone="neutral">{t("sharing.turnedOff")}</Badge>}
                 </div>
                 {s.status === "active" && (
                   <>
                     <div className="flex flex-wrap items-end gap-2">
-                      <Input label="Link" readOnly value={shareUrl(s.id)} className="min-w-0 flex-1" onFocus={(e) => e.currentTarget.select()} />
+                      <Input label={t("sharing.linkLabel")} readOnly value={shareUrl(s.id)} className="min-w-0 flex-1" onFocus={(e) => e.currentTarget.select()} />
                       <Button
                         onClick={() =>
                           navigator.clipboard
                             ?.writeText(shareUrl(s.id))
-                            .then(() => toast({ title: "Link copied", tone: "success" }))
-                            .catch(() => toast({ title: "Copy the link from the box", tone: "error" }))
+                            .then(() => toast({ title: t("sharing.copied"), tone: "success" }))
+                            .catch(() => toast({ title: t("sharing.copyFailed"), tone: "error" }))
                         }
                         icon={<Copy aria-hidden className="size-4" />}
                       >
-                        Copy
+                        {t("common.copy")}
                       </Button>
                     </div>
                     <ShareResults shareId={s.id} options={s.options} />
@@ -142,11 +144,11 @@ export function FamilyLinks({ uid }: { uid: string }) {
                 <div className="flex flex-wrap gap-2">
                   {s.status === "active" && (
                     <Button variant="ghost" onClick={() => setRevoking(s)} icon={<Link2Off aria-hidden className="size-4" />}>
-                      Turn off link
+                      {t("sharing.turnOffLink")}
                     </Button>
                   )}
                   <Button variant="ghost" onClick={() => setRemoving(s)} icon={<Trash2 aria-hidden className="size-4" />}>
-                    Delete link and votes
+                    {t("sharing.deleteLinkVotes")}
                   </Button>
                 </div>
               </CardBody>
@@ -158,20 +160,20 @@ export function FamilyLinks({ uid }: { uid: string }) {
       <Modal
         open={revoking !== null}
         onOpenChange={(o) => !o && setRevoking(null)}
-        title="Turn off this link?"
-        description="Anyone who opens it will see that it's no longer active. You can't turn it back on, but you can make a new one."
+        title={t("sharing.revokeTitle")}
+        description={t("sharing.revokeDescription")}
         footer={
           <>
-            <Button onClick={() => setRevoking(null)}>Keep it on</Button>
+            <Button onClick={() => setRevoking(null)}>{t("sharing.keepItOn")}</Button>
             <Button
               variant="primary"
               onClick={async () => {
                 const s = revoking!;
                 setRevoking(null);
-                await revokeShare(s.id).then(() => toast({ title: "Link turned off" })).catch(() => toast({ title: "We couldn't turn it off", tone: "error" }));
+                await revokeShare(s.id).then(() => toast({ title: t("sharing.revoked") })).catch(() => toast({ title: t("sharing.revokeError"), tone: "error" }));
               }}
             >
-              Turn off
+              {t("sharing.turnOff")}
             </Button>
           </>
         }
@@ -179,20 +181,20 @@ export function FamilyLinks({ uid }: { uid: string }) {
       <Modal
         open={removing !== null}
         onOpenChange={(o) => !o && setRemoving(null)}
-        title="Delete this link and its votes?"
-        description="Anyone who opens it will see that it has been removed. This can't be undone."
+        title={t("sharing.deleteTitle")}
+        description={t("sharing.deleteDescription")}
         footer={
           <>
-            <Button onClick={() => setRemoving(null)}>Keep it</Button>
+            <Button onClick={() => setRemoving(null)}>{t("sharing.keepIt")}</Button>
             <Button
               variant="primary"
               onClick={async () => {
                 const s = removing!;
                 setRemoving(null);
-                await deleteShare(s.id).then(() => toast({ title: "Link deleted" })).catch(() => toast({ title: "We couldn't delete it", tone: "error" }));
+                await deleteShare(s.id).then(() => toast({ title: t("sharing.deleted") })).catch(() => toast({ title: t("sharing.deleteError"), tone: "error" }));
               }}
             >
-              Delete
+              {t("common.delete")}
             </Button>
           </>
         }
@@ -202,13 +204,14 @@ export function FamilyLinks({ uid }: { uid: string }) {
 }
 
 function PlanRenders({ plan, chosen, onToggle }: { plan: PlanRow; chosen: ShareOption[]; onToggle: (o: ShareOption) => void }) {
+  const t = useT();
   const { venue, space, estimates } = usePlanEstimate(plan);
-  if (!venue || !estimates) return <p className="text-small text-muted">Loading {plan.name}...</p>;
+  if (!venue || !estimates) return <p className="text-small text-muted">{t("sharing.loadingPlan", { plan: plan.name })}</p>;
   const aspect = space?.photo ? `${space.photo.width} / ${space.photo.height}` : "4 / 3";
   return (
     <div className="flex flex-col gap-2">
       <p className="text-small">
-        <span className="font-semibold">{plan.name}</span> · {venue.name} · <span className="num">{formatSGD(estimates.combinedTotalCents)}</span> estimate
+        <span className="font-semibold">{plan.name}</span> · {venue.name} · <span className="num">{t("sharing.amountEstimate", { amount: formatSGD(estimates.combinedTotalCents) })}</span>
       </p>
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {plan.savedRenders.map((r) => {
@@ -230,16 +233,13 @@ function PlanRenders({ plan, chosen, onToggle }: { plan: PlanRow; chosen: ShareO
                 <input type="checkbox" className="sr-only" checked={on} onChange={() => onToggle(option)} />
                 <StorageImage
                   photo={{ path: r.path, width: space?.photo?.width ?? 4, height: space?.photo?.height ?? 3, contentType: "image/jpeg" }}
-                  alt={`Saved AI illustration, ${themeLabel(r.themeId)} theme`}
+                  alt={t("render.savedAlt", { theme: themeLabelT(t, r.themeId) })}
                   aspect={aspect}
                   sizes="(min-width: 48rem) 220px, 45vw"
                 />
                 <span className="flex items-center justify-between text-small">
-                  <span>
-                    {themeLabel(r.themeId)}
-                    {r.demo ? " · DEMO" : ""}
-                  </span>
-                  {on && <span className="font-semibold text-accent-text">Option {optionLetter(idx)}</span>}
+                  <span>{r.demo ? t("sharing.themeDemo", { theme: themeLabelT(t, r.themeId) }) : themeLabelT(t, r.themeId)}</span>
+                  {on && <span className="font-semibold text-accent-text">{t("sharing.option", { letter: optionLetter(idx) })}</span>}
                 </span>
               </label>
             </li>

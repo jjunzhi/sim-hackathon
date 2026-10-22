@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 import { modalVariants, overlayVariants, sheetVariants } from "@/lib/motion";
+import { useT } from "@/lib/i18n/provider";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 
 interface OverlayBaseProps {
@@ -36,10 +37,11 @@ function useReturnFocus(open: boolean) {
 }
 
 function CloseButton() {
+  const t = useT();
   return (
     <Dialog.Close
       className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-subtle hover:text-ink"
-      aria-label="Close"
+      aria-label={t("common.close")}
     >
       <X aria-hidden className="size-5" />
     </Dialog.Close>

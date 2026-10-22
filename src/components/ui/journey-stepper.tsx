@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/lib/i18n/provider";
 import { transition } from "@/lib/motion";
 
 export interface JourneyStep {
@@ -31,21 +32,20 @@ export function JourneyStepper({
   current,
   onStepChange,
   allowForward,
-  label = "Planning steps",
+  label,
   className,
 }: JourneyStepperProps) {
+  const t = useT();
   const progress = steps.length > 1 ? current / (steps.length - 1) : 1;
   const currentStep = steps[current];
 
   return (
-    <nav aria-label={label} className={cn("w-full", className)}>
+    <nav aria-label={label ?? t("ui.stepper.label")} className={cn("w-full", className)}>
       {/* Mobile compact */}
       <div className="flex flex-col gap-2 sm:hidden">
         <p className="flex items-baseline justify-between text-small">
           <span className="font-semibold text-ink">{currentStep?.label}</span>
-          <span className="num text-muted">
-            Step {current + 1} of {steps.length}
-          </span>
+          <span className="num text-muted">{t("common.stepOf", { n: current + 1, total: steps.length })}</span>
         </p>
         <div className="h-1.5 overflow-hidden rounded-full bg-subtle">
           <motion.div
@@ -93,7 +93,7 @@ export function JourneyStepper({
                 {dot}
                 <span className={cn("text-small", state === "current" ? "font-semibold text-ink" : "text-muted")}>
                   {step.label}
-                  {state === "done" && <span className="sr-only"> (completed)</span>}
+                  {state === "done" && <span className="sr-only"> {t("ui.stepper.completed")}</span>}
                 </span>
               </>
             );

@@ -3,17 +3,14 @@
 import { AnimatePresence, motion } from "motion/react";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { checkCapacity } from "@/lib/capacity";
+import { useT } from "@/lib/i18n/provider";
 import { slideDown } from "@/lib/motion";
 
 /** "Within capacity" or a warning that slides in. Announced only when the status changes. */
 export function CapacityStatus({ headcount, range }: { headcount: number; range: { min: number; max: number } }) {
+  const t = useT();
   const { status } = checkCapacity(headcount, range);
-  const message =
-    status === "over"
-      ? `Over this room's maximum of ${range.max} guests. Trim the guest list or choose a larger room.`
-      : status === "under"
-        ? `Below this room's minimum of ${range.min} guests. Check with the venue before booking.`
-        : null;
+  const message = status === "over" ? t("studio.overCapacity", { max: range.max }) : status === "under" ? t("studio.underCapacity", { min: range.min }) : null;
   return (
     <div aria-live="polite" aria-atomic="true">
       <AnimatePresence initial={false} mode="wait">
@@ -32,7 +29,7 @@ export function CapacityStatus({ headcount, range }: { headcount: number; range:
         ) : (
           <motion.p key="within" variants={slideDown} initial="hidden" animate="visible" exit="exit" className="flex items-center gap-2 text-small font-semibold text-success">
             <CircleCheck aria-hidden className="size-4" />
-            Within capacity
+            {t("studio.withinCapacity")}
           </motion.p>
         )}
       </AnimatePresence>

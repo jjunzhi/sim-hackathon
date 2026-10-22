@@ -61,6 +61,25 @@ node scripts/e2e-phase2.mjs
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
 
+## Culture and inclusion (Phase 6)
+
+- **Languages:** English, 中文 (Simplified Chinese), Bahasa Melayu and தமிழ் on every couple screen and the family vote page; the vendor portal stays English. The language menu sits in the header. The choice is kept in this browser (`localStorage`) and, for signed-in users, on the profile (`users/{uid}.locale`, the one profile field a user may change), so it follows them to another device. `<html lang>` follows the choice, and dates use `Intl` in that language, in Singapore time.
+  - How it works: `src/lib/i18n`. A small typed `t(key, vars)` with `{name}` placeholders and plurals through `Intl.PluralRules` (`key_one` / `key_other`). English is the reference (`dictionaries/en/*.ts`, one file per screen); the other languages load on demand. No i18n library and no `/[lang]/` URLs: every app screen renders on the client, so locale routing would add a proxy and a route segment without any SEO gain.
+  - **The Chinese, Malay and Tamil dictionaries are drafts** (`status: "draft"` in `dictionaries/zh.ts`, `ms.ts`, `ta.ts`). Until a native speaker reviews one and its status is set to `"reviewed"`, readers in that language see a one-line note that the translation is under review. Vendor-entered text (venue and item names, descriptions) is never translated.
+  - `npm test` fails if a language is missing a key, has an extra one, or drops a `{placeholder}`.
+  - Chinese and Tamil switch both fonts to Noto Sans SC and Noto Sans Tamil (self-hosted through `next/font`), because Fraunces and Plus Jakarta Sans have no glyphs for those scripts.
+- **Ritual checklists** (`/checklists`): Chinese Tea Ceremony, Malay Akad Nikah and Sanding, Indian Vivaha and Sangeet, and ROM Solemnization, with items for before and on the day. Ticks and the couple's own items are saved per couple in `checklists/{uid}` (owner only) and deleted with the account. **All checklist content is a draft that needs community review**, and the page says so. The structure is in `src/lib/rituals/content.ts` and the wording is in the dictionaries under `ritual.*`, so reviewers edit text without touching code.
+- **Dietary:** "Food and drink" items can carry halal, vegetarian, vegan, no beef and no pork tags. Venues can list the menus they cater for. Couples filter the catalog by menus and the Studio's food items by tag; decor is never hidden. These are always the **vendor's statements**: the UI says so, and halal venues link to the [MUIS halal search](https://halal.muis.gov.sg/halal/establishments) so couples can check a certificate. We make no certification claims.
+- **Access:** besides wheelchair and lift access, venues can declare a step-free entrance, an accessible toilet and accessible parking. The catalog filters on all five. Anything not declared reads "not listed", never "no". Venues and items saved before Phase 6 have none of the new fields, and the rules accept them as they are.
+- **Maps:** the venue page shows a Google Maps Embed (`place` mode) when `NEXT_PUBLIC_MAPS_EMBED_KEY` is set, plus "Open in Google Maps" and "Directions" links, which need no key. Google lists the Embed API as free with unlimited requests, but the key is public in the browser, so **restrict it in Google Cloud to the Maps Embed API and to your site's HTTP referrers**. Without a key (local and CI) the page shows the links and a note instead of a map. We never geocode or store coordinates.
+- **Calendar (light):** a plan has an optional wedding date. In the Estimate step, "Add to calendar" downloads an all-day `.ics` (RFC 5545; it opens in Google, Apple or Outlook calendars). Vendors list booked dates by hand on their Business page (`vendors/{uid}/blockedDates`; only the date is public, once the business is published). The venue page lists them, and the Studio warns when the chosen date is one of them. Two-way Google Calendar sync is left for the pilot: it needs a verified OAuth consent screen and server-side token storage.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running):
+
+```bash
+node scripts/e2e-phase6.mjs
+```
+
 ## Family links, voting and vendor confirmation (Phase 5)
 
 - **Family links** (`shares/{id}`): a couple puts 2 or 3 saved renders, from any of their plans, side by side under one question. The id is 128 random bits (22 characters, base64url), so a link can't be guessed; anyone with the link can open it. Each option shows its plan's estimate total at the moment the link was made, with the Estimate badge and the AI illustration note.

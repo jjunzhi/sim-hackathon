@@ -6,6 +6,7 @@ import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { modalVariants, sheetVariants } from "@/lib/motion";
+import { useT } from "@/lib/i18n/provider";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 
 type ToastTone = "info" | "success" | "error";
@@ -40,6 +41,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
+  const tr = useT();
 
   const show = useCallback((options: ToastOptions) => {
     const id = nextId.current++;
@@ -52,7 +54,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastContext.Provider value={value}>
-      <RToast.Provider swipeDirection={desktop ? "right" : "down"} label="Notification">
+      <RToast.Provider swipeDirection={desktop ? "right" : "down"} label={tr("ui.toast.region")}>
         {children}
         <AnimatePresence initial={false}>
           {toasts.map((t) => (
@@ -80,7 +82,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   {t.description && <RToast.Description className="text-small text-muted">{t.description}</RToast.Description>}
                 </div>
                 <RToast.Close
-                  aria-label="Dismiss"
+                  aria-label={tr("common.dismiss")}
                   className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-subtle hover:text-ink"
                 >
                   <X aria-hidden className="size-4" />

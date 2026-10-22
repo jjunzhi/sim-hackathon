@@ -115,6 +115,30 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* Chinese and Tamil: the Latin display and text fonts have no glyphs for these
+     scripts, so both roles use a Noto family that does. Set by LocaleProvider. */
+  html[data-locale="zh"] {
+    --font-display: var(--font-noto-sc), "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-sans: var(--font-noto-sc), "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  html[data-locale="ta"] {
+    --font-display: var(--font-noto-tamil), "Nirmala UI", "Latha", sans-serif;
+    --font-sans: var(--font-noto-tamil), "Nirmala UI", "Latha", sans-serif;
+  }
+  html[data-locale="zh"] h1, html[data-locale="zh"] h2, html[data-locale="zh"] h3,
+  html[data-locale="ta"] h1, html[data-locale="ta"] h2, html[data-locale="ta"] h3 {
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  /* Tamil glyphs reach higher and lower than Latin; a little more leading keeps lines apart. */
+  html[data-locale="ta"] body {
+    line-height: 1.75;
+  }
+  /* Tamil nav words are long; at 390px five of them fit only a touch smaller. */
+  html[data-locale="ta"] nav.fixed a {
+    font-size: 0.6875rem;
+  }
+
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);

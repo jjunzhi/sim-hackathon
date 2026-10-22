@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { motion } from "motion/react";
 import { CircleCheck, Heart, Link2Off } from "lucide-react";
 import { useEffect, useState } from "react";
+import { LanguageMenu } from "@/components/language-menu";
 import { StorageImage } from "@/components/photos/storage-image";
 import { optionLetter } from "@/components/sharing/share-results";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { TranslationNote } from "@/components/translation-note";
 import { cn } from "@/lib/cn";
 import { castVote, ensureVisitorSession, getMyVote, getShare, type ShareLookup } from "@/lib/data/shares";
+import { useT } from "@/lib/i18n/provider";
 import { formatSGD } from "@/lib/money";
 import { transition } from "@/lib/motion";
-import { themeLabel } from "@/lib/render/themes";
+import { themeLabelT } from "@/lib/render/themes";
 import { SHARE_LIMITS, type Vote } from "@/lib/sharing/model";
 
 /**
@@ -25,8 +28,9 @@ import { SHARE_LIMITS, type Vote } from "@/lib/sharing/model";
  */
 export default function FamilyVotePage() {
   const { shareId } = useParams<{ shareId: string }>();
+  const t = useT();
   const [state, setState] = useState<{ uid: string; lookup: ShareLookup; vote: Vote | null } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"vote.errorOpen" | "vote.errorVote" | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
@@ -41,7 +45,7 @@ export default function FamilyVotePage() {
         const vote = lookup.kind === "active" ? await getMyVote(shareId, uid) : null;
         if (!cancelled) setState({ uid, lookup, vote });
       } catch {
-        if (!cancelled) setError("We couldn't open this link. Check your connection and try again.");
+        if (!cancelled) setError("vote.errorOpen");
       }
     })();
     return () => {
@@ -61,7 +65,7 @@ export default function FamilyVotePage() {
       // Most likely a vote already exists for this browser.
       const existing = await getMyVote(shareId, state.uid);
       if (existing) setState({ ...state, vote: existing });
-      else setError("We couldn't send your vote. Please try again.");
+      else setError("vote.errorVote");
     } finally {
       setBusy(false);
     }
@@ -72,32 +76,34 @@ export default function FamilyVotePage() {
       <header className="border-b border-line bg-surface">
         <div className="container-page flex min-h-16 items-center">
           <span className="font-display text-h3">WeddingVista</span>
+          <LanguageMenu className="ml-auto" />
         </div>
       </header>
+      <TranslationNote />
       <main className="container-page flex flex-col gap-6 py-8">
         {error && (
           <p role="alert" className="text-error">
-            {error}
+            {t(error)}
           </p>
         )}
-        {!state && !error && <SkeletonList rows={2} label="Opening the link" />}
+        {!state && !error && <SkeletonList rows={2} label={t("vote.loading")} />}
         {state?.lookup.kind === "removed" && (
-          <Message icon={<Link2Off aria-hidden className="size-8" />} title="This project has been removed" body="The couple has deleted it. There's nothing to see here any more." />
+          <Message icon={<Link2Off aria-hidden className="size-8" />} title={t("vote.removedTitle")} body={t("vote.removedBody")} />
         )}
         {state?.lookup.kind === "revoked" && (
-          <Message icon={<Link2Off aria-hidden className="size-8" />} title="This link is no longer active" body="The couple has turned it off. Ask them for a new link if you'd like to vote." />
+          <Message icon={<Link2Off aria-hidden className="size-8" />} title={t("vote.revokedTitle")} body={t("vote.revokedBody")} />
         )}
         {state?.lookup.kind === "active" && (
           <>
             <div className="flex flex-col gap-2">
-              <p className="text-small font-semibold uppercase tracking-widest text-accent-text">You&apos;re invited to help choose</p>
+              <p className="text-small font-semibold uppercase tracking-widest text-accent-text">{t("vote.invited")}</p>
               <h1 className="text-h1">{state.lookup.share.title}</h1>
-              <p className="max-w-2xl text-muted">Tap your favourite. Your vote goes only to the couple. No account needed.</p>
+              <p className="max-w-2xl text-muted">{t("vote.intro")}</p>
             </div>
 
             <form onSubmit={submit} className="flex flex-col gap-6">
               <fieldset disabled={!!state.vote}>
-                <legend className="sr-only">Options</legend>
+                <legend className="sr-only">{t("vote.optionsLegend")}</legend>
                 <ul className={cn("grid gap-5", state.lookup.share.options.length === 3 ? "lg:grid-cols-3" : "md:grid-cols-2")}>
                   {state.lookup.share.options.map((o, i) => {
                     const selected = state.vote ? state.vote.optionIndex === i : choice === i;
@@ -116,25 +122,24 @@ export default function FamilyVotePage() {
                           <input type="radio" name="option" className="sr-only" checked={selected} onChange={() => setChoice(i)} />
                           <StorageImage
                             photo={{ path: o.renderPath, width: Number(o.aspect.split("/")[0]) || 4, height: Number(o.aspect.split("/")[1]) || 3, contentType: "image/jpeg" }}
-                            alt={`Option ${optionLetter(i)}: AI illustration of ${o.venueName} in the ${themeLabel(o.themeId)} theme`}
+                            alt={t("vote.optionAlt", { letter: optionLetter(i), venue: o.venueName, theme: themeLabelT(t, o.themeId) })}
                             aspect={o.aspect}
                             className="rounded-none"
                             sizes="(min-width: 64rem) 33vw, (min-width: 48rem) 50vw, 100vw"
                           />
                           <span className="flex flex-1 flex-col gap-2 p-4">
                             <span className="flex items-center justify-between gap-2">
-                              <span className="font-display text-h3">Option {optionLetter(i)}</span>
+                              <span className="font-display text-h3">{t("vote.option", { letter: optionLetter(i) })}</span>
                               {selected && <Heart aria-hidden className="size-5 fill-accent text-accent" />}
                             </span>
-                            <span>
-                              {o.venueName} · {themeLabel(o.themeId)}
-                            </span>
+                            <span>{t("vote.optionMeta", { venue: o.venueName, theme: themeLabelT(t, o.themeId) })}</span>
                             <span className="flex flex-wrap items-center gap-2">
                               <span className="num font-semibold">{formatSGD(o.estimateTotalCents)}</span>
-                              <Badge tone="estimate">Estimate</Badge>
+                              <Badge tone="estimate">{t("badge.estimate")}</Badge>
                             </span>
                             <span className="text-small text-muted">
-                              AI illustration. Final decor may differ.{o.demo ? " DEMO image, not an AI render." : ""}
+                              {t("render.aiNote")}
+                              {o.demo ? ` ${t("render.demoNote")}` : ""}
                             </span>
                           </span>
                         </motion.label>
@@ -147,25 +152,25 @@ export default function FamilyVotePage() {
               {state.vote ? (
                 <p role="status" className="flex items-center gap-2 rounded-xl border border-success bg-surface p-4 font-semibold text-success">
                   <CircleCheck aria-hidden className="size-5" />
-                  Thank you! You chose Option {optionLetter(state.vote.optionIndex)}. The couple will see your vote.
+                  {t("vote.thankYou", { letter: optionLetter(state.vote.optionIndex) })}
                 </p>
               ) : (
                 <div className="flex max-w-xl flex-col gap-4">
-                  <Input label="Your name or relationship (optional)" placeholder="For example, Auntie Mei" maxLength={SHARE_LIMITS.nameMax} value={name} onChange={(e) => setName(e.target.value)} />
-                  <Textarea label="A note for the couple (optional)" maxLength={SHARE_LIMITS.noteMax} value={note} onChange={(e) => setNote(e.target.value)} className="[&_textarea]:min-h-24" />
+                  <Input label={t("vote.nameLabel")} placeholder={t("vote.namePlaceholder")} maxLength={SHARE_LIMITS.nameMax} value={name} onChange={(e) => setName(e.target.value)} />
+                  <Textarea label={t("vote.noteLabel")} maxLength={SHARE_LIMITS.noteMax} value={note} onChange={(e) => setNote(e.target.value)} className="[&_textarea]:min-h-24" />
                   <Button type="submit" variant="primary" size="lg" disabled={choice === null} loading={busy} className="self-start">
-                    {choice === null ? "Choose an option first" : `Vote for Option ${optionLetter(choice)}`}
+                    {choice === null ? t("vote.chooseFirst") : t("vote.voteFor", { letter: optionLetter(choice) })}
                   </Button>
-                  <p className="text-small text-muted">One vote per person. We don&apos;t ask for contact details or store your IP address.</p>
+                  <p className="text-small text-muted">{t("vote.privacy")}</p>
                 </div>
               )}
             </form>
           </>
         )}
         <p className="text-small text-muted">
-          Planning your own wedding?{" "}
+          {t("vote.footerSentence")}{" "}
           <Link href="/" className="font-semibold text-accent-text underline underline-offset-4">
-            See how WeddingVista works
+            {t("vote.footerLink")}
           </Link>
         </p>
       </main>

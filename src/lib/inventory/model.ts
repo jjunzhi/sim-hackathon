@@ -40,6 +40,8 @@ export interface InventoryItem {
   description: string;
   photo: StoredPhoto | null;
   active: boolean;
+  /** Dietary ids from DIET_TAGS; meaningful for "Food and drink" items. Vendor-declared. */
+  dietaryTags: string[];
 }
 
 /** A named bundle with its own price; lists the items it includes. */

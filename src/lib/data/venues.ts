@@ -24,7 +24,18 @@ export type WithId<T> = T & { id: string };
 
 export type VenueProfileInput = Pick<
   Venue,
-  "name" | "address" | "postalCode" | "description" | "styleTags" | "cultureTags" | "wheelchairAccess" | "liftAccess"
+  | "name"
+  | "address"
+  | "postalCode"
+  | "description"
+  | "styleTags"
+  | "cultureTags"
+  | "wheelchairAccess"
+  | "liftAccess"
+  | "stepFreeEntrance"
+  | "accessibleToilet"
+  | "accessibleParking"
+  | "menuOptions"
 >;
 
 export type SpaceInput = Pick<Space, "name" | "capacityMin" | "capacityMax" | "seatsPerTable" | "tiers" | "sortOrder">;

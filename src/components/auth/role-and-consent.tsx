@@ -4,32 +4,33 @@ import { Heart, Store } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/cn";
 import type { Role } from "@/lib/data/users";
-import { CONSENT_IS_DRAFT, consentCopy } from "@/lib/legal";
-
-const ROLES: Array<{ value: Role; title: string; body: string; icon: React.ReactNode }> = [
-  {
-    value: "couple",
-    title: "We're planning a wedding",
-    body: "Compare venues, see decorated rooms and share options with family.",
-    icon: <Heart aria-hidden className="size-5" />,
-  },
-  {
-    value: "vendor",
-    title: "I'm a vendor",
-    body: "List your venue, spaces and prices, and receive enquiries.",
-    icon: <Store aria-hidden className="size-5" />,
-  },
-];
+import { useT } from "@/lib/i18n/provider";
+import { CONSENT_IS_DRAFT } from "@/lib/legal";
 
 export function RolePicker({ value, onChange, error }: { value: Role | null; onChange: (r: Role) => void; error?: string }) {
+  const t = useT();
+  const roles: Array<{ value: Role; title: string; body: string; icon: React.ReactNode }> = [
+    {
+      value: "couple",
+      title: t("auth.role.coupleTitle"),
+      body: t("auth.role.coupleBody"),
+      icon: <Heart aria-hidden className="size-5" />,
+    },
+    {
+      value: "vendor",
+      title: t("auth.role.vendorTitle"),
+      body: t("auth.role.vendorBody"),
+      icon: <Store aria-hidden className="size-5" />,
+    },
+  ];
   return (
     <fieldset className="flex flex-col gap-3" aria-describedby={error ? "role-error" : "role-hint"}>
-      <legend className="mb-1 text-small font-semibold text-ink">How will you use WeddingVista?</legend>
+      <legend className="mb-1 text-small font-semibold text-ink">{t("auth.role.legend")}</legend>
       <p id="role-hint" className="-mt-1 text-small text-muted">
-        This can&apos;t be changed later.
+        {t("auth.role.hint")}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {ROLES.map((r) => {
+        {roles.map((r) => {
           const checked = value === r.value;
           return (
             <label
@@ -66,12 +67,14 @@ export function RolePicker({ value, onChange, error }: { value: Role | null; onC
   );
 }
 
+/** Consent wording is in the dictionary (auth.consent.*); its version is CONSENT_VERSION in src/lib/legal.ts. */
 export function ConsentField({ checked, onChange, error }: { checked: boolean; onChange: (c: boolean) => void; error?: string }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-line bg-subtle p-4">
-      <p className="text-small text-ink">{consentCopy.summary}</p>
-      {CONSENT_IS_DRAFT && <p className="text-small font-semibold text-warning">{consentCopy.draftNotice}</p>}
-      <Checkbox label={consentCopy.label} checked={checked} onCheckedChange={onChange} />
+      <p className="text-small text-ink">{t("auth.consent.summary")}</p>
+      {CONSENT_IS_DRAFT && <p className="text-small font-semibold text-warning">{t("auth.consent.draftNotice")}</p>}
+      <Checkbox label={t("auth.consent.label")} checked={checked} onCheckedChange={onChange} />
       {error && <p className="text-small font-medium text-error">{error}</p>}
     </div>
   );

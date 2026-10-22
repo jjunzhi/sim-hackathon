@@ -109,3 +109,32 @@ export async function uploadSubPhoto(
   await updateDoc(doc(db, "vendors", uid, sub, row.id), { photo, updatedAt: serverTimestamp() });
   if (row.photo) await deleteObject(ref(storage, row.photo.path)).catch(() => undefined);
 }
+
+// ---------- blocked dates (Phase 6) ----------
+// Dates a vendor already has booked, entered by hand. Public once the business
+// is published, so couples don't plan around a taken date.
+
+export interface BlockedDate {
+  /** YYYY-MM-DD */
+  date: string;
+  note: string;
+}
+
+export function watchBlockedDates(uid: string, onData: (rows: WithId<BlockedDate>[]) => void, onError?: (e: Error) => void): Unsubscribe {
+  const { db } = getFirebase();
+  return onSnapshot(
+    collection(db, "vendors", uid, "blockedDates"),
+    (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as BlockedDate) })).sort((a, b) => a.date.localeCompare(b.date))),
+    onError,
+  );
+}
+
+export async function addBlockedDate(uid: string, input: BlockedDate): Promise<void> {
+  const { db } = getFirebase();
+  await addDoc(collection(db, "vendors", uid, "blockedDates"), { ...input, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
+
+export async function removeBlockedDate(uid: string, id: string): Promise<void> {
+  const { db } = getFirebase();
+  await deleteDoc(doc(db, "vendors", uid, "blockedDates", id));
+}

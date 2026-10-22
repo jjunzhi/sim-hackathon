@@ -102,6 +102,13 @@ export const deletionSteps: Array<{ name: string; run: (ctx: DeletionContext) =>
     },
   },
   {
+    // Ritual checklist ticks and the couple's own items (Phase 6).
+    name: "ritual checklists",
+    run: async ({ uid, db }) => {
+      await db.recursiveDelete(db.collection("checklists").doc(uid));
+    },
+  },
+  {
     name: "render usage counters",
     run: async ({ uid, db }) => {
       const usage = await db.collection("usage").where("subject", "==", uid).get();

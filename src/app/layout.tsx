@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Fraunces, Noto_Sans_SC, Noto_Sans_Tamil, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -16,6 +16,20 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+// Scripts the Latin fonts don't cover (Phase 6). Served only when the page
+// is in that language: globals.css swaps them in by html[data-locale].
+const notoSC = Noto_Sans_SC({
+  subsets: ["latin"],
+  variable: "--font-noto-sc",
+  display: "swap",
+});
+
+const notoTamil = Noto_Sans_Tamil({
+  subsets: ["tamil", "latin"],
+  variable: "--font-noto-tamil",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: { default: "WeddingVista", template: "%s · WeddingVista" },
   description: "See your Singapore venue decorated, with honest itemised estimates.",
@@ -29,7 +43,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-SG" className={`${fraunces.variable} ${jakarta.variable}`}>
+    <html lang="en-SG" className={`${fraunces.variable} ${jakarta.variable} ${notoSC.variable} ${notoTamil.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>
