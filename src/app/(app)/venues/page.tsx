@@ -9,7 +9,7 @@ import { VenueCard } from "@/components/catalog/venue-card";
 import { Button } from "@/components/ui/button";
 import { BottomSheet } from "@/components/ui/modal";
 import { EmptyState, Skeleton } from "@/components/ui/skeleton";
-import { watchCatalog } from "@/lib/data/catalog";
+import { watchCatalog, watchCatalogConfig } from "@/lib/data/catalog";
 import { useT } from "@/lib/i18n/provider";
 import { revealContainer } from "@/lib/motion";
 import { activeFilterCount, matchesFilters, NO_FILTERS, type CatalogFilters, type CatalogVenue } from "@/lib/venues/catalog";
@@ -22,6 +22,9 @@ export default function CatalogPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => watchCatalog(setVenues, () => setError(true)), []);
+  // Set by scripts/sample-venues.mjs while demonstration listings are loaded.
+  const [sampleListings, setSampleListings] = useState(false);
+  useEffect(() => watchCatalogConfig((c) => setSampleListings(c.sampleListings)), []);
 
   const shown = useMemo(() => (venues ?? []).filter((v) => matchesFilters(v, filters)), [venues, filters]);
   const count = activeFilterCount(filters);
@@ -34,6 +37,11 @@ export default function CatalogPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-h1">{t("nav.venues")}</h1>
           <p className="max-w-2xl text-muted">{t("catalog.intro")}</p>
+          {sampleListings && (
+            <p role="note" className="w-fit rounded-xl border border-gold bg-surface px-4 py-2 text-small">
+              {t("catalog.sampleNote")}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-3 lg:hidden">
@@ -83,7 +91,7 @@ export default function CatalogPage() {
             {venues && shown.length === 0 && (
               <EmptyState
                 icon={<SearchX aria-hidden className="size-8" />}
-                title={t("catalog.noMatch")}
+                title={count > 0 ? t("catalog.noMatch") : t("catalog.noneListedTitle")}
                 action={count > 0 ? <Button onClick={() => setFilters(NO_FILTERS)}>{t("catalog.clearFilters")}</Button> : undefined}
               >
                 {count > 0 ? t("catalog.noMatchHint") : t("catalog.noneListed")}

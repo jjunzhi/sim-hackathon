@@ -72,7 +72,12 @@ export function ConsentField({ checked, onChange, error }: { checked: boolean; o
   const t = useT();
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-line bg-subtle p-4">
-      <p className="text-small text-ink">{t("auth.consent.summary")}</p>
+      <p className="text-small text-ink">
+        {t("auth.consent.summary")}{" "}
+        <a href="/privacy" target="_blank" rel="noopener" className="font-semibold text-accent-text underline underline-offset-4">
+          {t("auth.consent.privacyLink")}
+        </a>
+      </p>
       {CONSENT_IS_DRAFT && <p className="text-small font-semibold text-warning">{t("auth.consent.draftNotice")}</p>}
       <Checkbox label={t("auth.consent.label")} checked={checked} onCheckedChange={onChange} />
       {error && <p className="text-small font-medium text-error">{error}</p>}

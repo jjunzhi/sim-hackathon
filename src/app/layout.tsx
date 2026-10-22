@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Noto_Sans_SC, Noto_Sans_Tamil, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -31,8 +32,18 @@ const notoTamil = Noto_Sans_Tamil({
 });
 
 export const metadata: Metadata = {
-  title: { default: "WeddingVista", template: "%s · WeddingVista" },
-  description: "See your Singapore venue decorated, with honest itemised estimates.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "WeddingVista: see your venue decorated, with honest prices", template: "%s · WeddingVista" },
+  description: "Pick a real Singapore venue and room, choose decor vendors can actually deliver, see it decorated, and get an itemised estimate before you commit.",
+  applicationName: "WeddingVista",
+  openGraph: {
+    type: "website",
+    siteName: "WeddingVista",
+    locale: "en_SG",
+    title: "WeddingVista: see your venue decorated, with honest prices",
+    description: "Real Singapore rooms, decor vendors can deliver, and itemised estimates.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

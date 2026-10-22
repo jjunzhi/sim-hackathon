@@ -77,6 +77,14 @@ export function Landing({ accountDeleted }: { accountDeleted: boolean }) {
           </ol>
         </section>
       </main>
+      <footer className="border-t border-line">
+        <div className="container-page flex flex-wrap items-center justify-between gap-3 py-6 text-small text-muted">
+          <span>{t("landing.footer")}</span>
+          <Link href="/privacy" className="inline-flex min-h-11 items-center font-semibold text-accent-text underline underline-offset-4">
+            {t("landing.privacy")}
+          </Link>
+        </div>
+      </footer>
     </>
   );
 }

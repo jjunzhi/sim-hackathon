@@ -45,6 +45,7 @@ export const auth = {
   "auth.consent.summary":
     "We keep only what we need to run your account: your email address, your sign-in details, and the plans you save. Vendors you contact will see the details you choose to share with them. You can delete your account and data at any time from Account settings.",
   "auth.consent.draftNotice": "DRAFT wording. To be reviewed before launch.",
+  "auth.consent.privacyLink": "Read the privacy notice",
 
   // Account
   "auth.account.yourDetails": "Your details",
