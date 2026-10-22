@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Calculator, Home, Inbox, Package, Sparkles } from "lucide-react";
+import { Building2, Calculator, CircleHelp, CreditCard, Home, Inbox, Package, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -18,6 +18,8 @@ export function VendorNav() {
     { href: "/vendor/inventory", label: "Inventory", icon: Sparkles },
     { href: "/vendor/packages", label: "Packages", icon: Package },
     { href: "/vendor/estimate-preview", label: "Estimate preview", icon: Calculator },
+    { href: "/vendor/billing", label: "Plan", icon: CreditCard },
+    { href: "/vendor/help", label: "Help", icon: CircleHelp },
   ];
 
   return (

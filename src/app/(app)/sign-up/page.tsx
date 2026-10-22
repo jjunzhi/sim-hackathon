@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { authErrorMessage, safeNext } from "@/lib/auth/errors";
 import { homeFor } from "@/lib/auth/routes";
+import { stashInvite } from "@/lib/data/billing";
 import { createProfile, type Role } from "@/lib/data/users";
 import { getFirebase } from "@/lib/firebase/client";
 import { useT } from "@/lib/i18n/provider";
@@ -36,6 +37,12 @@ function SignUp() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<"email" | "google" | null>(null);
+
+  // A pilot invite link (?role=vendor&invite=...) is redeemed once the vendor area opens.
+  const invite = params.get("invite");
+  useEffect(() => {
+    if (invite) stashInvite(invite);
+  }, [invite]);
 
   // Already signed in with a profile: go home.
   useEffect(() => {

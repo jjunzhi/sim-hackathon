@@ -27,7 +27,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { buildIcs, downloadIcs, isIsoDate } from "@/lib/calendar/ics";
 import { clampHeadcount, sliderRange } from "@/lib/capacity";
 import { cn } from "@/lib/cn";
-import { getPublishedVenue, loadVenueCatalogs } from "@/lib/data/catalog";
+import { getPublishedVenue, getVendorCatalog, loadVenueCatalogs } from "@/lib/data/catalog";
 import type { RenderResult } from "@/lib/data/renders";
 import { clearStashedDraft, countMyPlans, createPlan, getPlan, peekStashedDraft, stashDraft, updatePlan } from "@/lib/data/plans";
 import { watchBlockedDates, type BlockedDate } from "@/lib/data/vendors";
@@ -110,6 +110,20 @@ function Studio() {
       unsub();
     };
   }, [venueId]);
+
+  // A saved plan may use a vendor that is no longer listed: load it so its items stay priced.
+  const missingVendors = draft && catalogs ? [...new Set(Object.keys(draft.selections).map((k) => parseSelectionKey(k)?.vendorUid))].filter((u): u is string => !!u && !catalogs.some((c) => c.uid === u)).sort().join(",") : "";
+  useEffect(() => {
+    if (!missingVendors) return;
+    let cancelled = false;
+    Promise.all(missingVendors.split(",").map(getVendorCatalog)).then((extra) => {
+      const found = extra.filter((c): c is VendorCatalog => c !== null);
+      if (!cancelled && found.length) setCatalogs((prev) => [...(prev ?? []), ...found.filter((f) => !(prev ?? []).some((p) => p.uid === f.uid))]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [missingVendors]);
 
   // The venue's own booked dates, to warn before a couple picks a taken one.
   const venueOwner = venue?.ownerUid ?? null;

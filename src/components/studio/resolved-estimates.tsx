@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleAlert, Clock, Send } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EstimateView, PerGuest } from "@/components/estimate/estimate-view";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import { BookingAnswer } from "@/components/studio/booking-answer";
+import { watchCoupleBookings, type BookingRow } from "@/lib/data/billing";
 import { requestConfirmation, type ConfirmationRow, type LeadRow } from "@/lib/data/leads";
 import { formatDate } from "@/lib/i18n/format";
 import { useLocale, useT } from "@/lib/i18n/provider";
@@ -72,6 +74,14 @@ export function ResolvedEstimates({
   );
   const multi = resolved.vendors.length > 1;
 
+  // A vendor that confirmed may later say the couple booked: show it under that vendor.
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  useEffect(() => (coupleUid ? watchCoupleBookings(coupleUid, setBookings) : undefined), [coupleUid]);
+  const bookingFor = (vendorUid: string) => {
+    const lead = leads.find((l) => l.planId === planId && l.vendorUid === vendorUid && l.status === "confirmed");
+    return lead ? bookings.find((b) => b.leadId === lead.id) : undefined;
+  };
+
   return (
     <div className="flex flex-col gap-8">
       {live.unavailable.length > 0 && (
@@ -90,6 +100,10 @@ export function ResolvedEstimates({
         <div key={v.vendorUid} className="flex flex-col gap-3">
           <EstimateView estimate={v.estimate} title={multi && v.isVenue ? t("estimate.vendorVenue", { vendor: v.vendorName }) : v.vendorName} badge={confirmedBadge(v)} />
           <StatusLine v={v} canRequest={!!planId && !!coupleUid} onRequest={() => setAsking(v)} />
+          {(() => {
+            const b = bookingFor(v.vendorUid);
+            return b ? <BookingAnswer booking={b} vendorName={v.vendorName} /> : null;
+          })()}
         </div>
       ))}
 

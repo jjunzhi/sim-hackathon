@@ -1,0 +1,6 @@
+uid,business,kinds,signed_up,invited,first_venue,published,listed,plan,pilot_until,first_lead,first_confirmation,first_booking,confirmed_bookings,feedback_messages
+ciyjCuaIkwEw6onmjH5cnbnQCAkG,SAMPLE Pilot Blooms,decorator,2026-10-22T13:18:55.245Z,yes,,yes,yes,active,2026-01-31T15:59:59.999Z,,,,0,0
+sample-decorator-1,SAMPLE Petal & Lantern Studio,decorator,2026-10-22T13:18:46.077Z,no,,yes,yes,pilot,2099-01-01T00:00:00.000Z,,,,0,0
+sample-venue-1,SAMPLE Garden Pavilion Co,venue,2026-10-22T13:18:46.077Z,no,2026-10-22T13:18:46.077Z,yes,yes,pilot,2099-01-01T00:00:00.000Z,2026-10-22T13:20:16.548Z,2026-10-22T13:20:21.094Z,2026-10-22T13:20:25.298Z,1,1
+sample-venue-2,SAMPLE Heritage Shophouse Pte,venue,2026-10-22T13:18:46.077Z,no,2026-10-22T13:18:46.077Z,yes,yes,pilot,2099-01-01T00:00:00.000Z,,,,0,0
+sample-venue-3,SAMPLE Rooftop Loft LLP,venue,2026-10-22T13:18:46.077Z,no,2026-10-22T13:18:46.077Z,yes,yes,pilot,2099-01-01T00:00:00.000Z,,,,0,0

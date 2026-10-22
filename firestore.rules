@@ -110,7 +110,7 @@ service cloud.firestore {
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
           'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess',
           'stepFreeEntrance', 'accessibleToilet', 'accessibleParking', 'menuOptions', 'coverPhoto',
-          'capacitySummary', 'createdAt', 'updatedAt'])
+          'capacitySummary', 'listed', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'status', 'verified', 'name', 'address', 'postalCode', 'description',
           'styleTags', 'cultureTags', 'wheelchairAccess', 'liftAccess', 'coverPhoto',
@@ -134,8 +134,12 @@ service cloud.firestore {
     }
 
     match /venues/{venueId} {
-      // Public read only for active venues; owners always see their own.
-      allow read: if resource.data.status == 'active'
+      // Anyone can open an active venue they already know (saved plans, family
+      // links). Finding it in the catalog also needs `listed`: the vendor's plan
+      // is in good standing (Phase 7). Owners always see their own.
+      allow get: if resource.data.status == 'active'
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow list: if (resource.data.status == 'active' && resource.data.listed == true)
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
 
       // Only vendors create venues, always as an unverified draft they own.
@@ -144,6 +148,7 @@ service cloud.firestore {
         && request.resource.data.status == 'draft'
         && request.resource.data.verified == false
         && !('capacitySummary' in request.resource.data)
+        && !('listed' in request.resource.data)
         && request.resource.data.createdAt == request.time
         && validVenue(request.resource.data, venueId);
 
@@ -153,6 +158,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.verified == resource.data.verified
         && request.resource.data.get('capacitySummary', null) == resource.data.get('capacitySummary', null)
+        && request.resource.data.get('listed', null) == resource.data.get('listed', null)
         && request.resource.data.createdAt == resource.data.createdAt
         && validVenue(request.resource.data, venueId);
 
@@ -226,7 +232,7 @@ service cloud.firestore {
     function validVendor(d) {
       return d.keys().hasOnly([
           'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
-          'published', 'createdAt', 'updatedAt'])
+          'published', 'listed', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'kinds', 'businessName', 'description', 'tax', 'servesAnyVenue', 'servesVenueIds',
           'published', 'createdAt', 'updatedAt'])
@@ -258,12 +264,17 @@ service cloud.firestore {
         return exists(/databases/$(database)/documents/vendors/$(uid));
       }
 
-      allow read: if resource.data.published == true || ownsVendor();
+      // Direct reads keep existing plans priced; discovery (decorators for a
+      // venue) also needs `listed`, which only the server writes (Phase 7).
+      allow get: if resource.data.published == true || ownsVendor();
+      allow list: if (resource.data.published == true && resource.data.listed == true) || ownsVendor();
       allow create: if ownsVendor() && isVendor()
         && validVendor(request.resource.data)
+        && !('listed' in request.resource.data)
         && request.resource.data.createdAt == request.time;
       allow update: if ownsVendor()
         && validVendor(request.resource.data)
+        && request.resource.data.get('listed', null) == resource.data.get('listed', null)
         && request.resource.data.createdAt == resource.data.createdAt;
       // Removed only by account deletion (Admin SDK).
       allow delete: if false;
@@ -577,6 +588,81 @@ service cloud.firestore {
           && request.resource.data.done is bool
           && request.resource.data.updatedAt == request.time;
       }
+    }
+
+    // ---------- billing/{uid}: plan status (Phase 7) ----------
+    // Written only by the server: the Stripe webhook, invite redemption and admin scripts.
+    match /billing/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // ---------- bookings/{leadId}: a confirmed lead that became a booking (Phase 7) ----------
+    // The vendor says it booked; the couple confirms or disputes. Only confirmed
+    // bookings count towards commission. No contact details are copied here.
+    match /bookings/{leadId} {
+      function lead() {
+        return get(/databases/$(database)/documents/leads/$(leadId)).data;
+      }
+
+      function validBookingFields(d) {
+        return isIsoDate(d.eventDate)
+          && (d.valueCents == null || isInt(d.valueCents, 0, 100000000000));
+      }
+
+      allow read: if signedIn()
+        && (resource.data.vendorUid == request.auth.uid || resource.data.coupleUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && exists(/databases/$(database)/documents/leads/$(leadId))
+        && lead().vendorUid == request.auth.uid
+        && lead().status == 'confirmed'
+        && request.resource.data.keys().hasOnly(['leadId', 'vendorUid', 'coupleUid', 'eventDate', 'valueCents', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['leadId', 'vendorUid', 'coupleUid', 'eventDate', 'valueCents', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.leadId == leadId
+        && request.resource.data.vendorUid == request.auth.uid
+        && request.resource.data.coupleUid == lead().coupleUid
+        && request.resource.data.status == 'claimed'
+        && validBookingFields(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // The couple answers a claim once: confirmed or disputed.
+      allow update: if signedIn()
+        && resource.data.coupleUid == request.auth.uid
+        && resource.data.status == 'claimed'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'respondedAt', 'updatedAt'])
+        && request.resource.data.status in ['confirmed', 'disputed']
+        && request.resource.data.respondedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // The vendor may correct the date or value, which asks the couple again.
+      allow update: if signedIn()
+        && resource.data.vendorUid == request.auth.uid
+        && resource.data.status in ['claimed', 'disputed']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['eventDate', 'valueCents', 'status', 'updatedAt'])
+        && request.resource.data.status == 'claimed'
+        && validBookingFields(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+
+      // A claim can be withdrawn until the couple confirms it.
+      allow delete: if signedIn()
+        && resource.data.vendorUid == request.auth.uid
+        && resource.data.status != 'confirmed';
+    }
+
+    // ---------- feedback/{id}: vendors' in-app feedback during the pilot (Phase 7) ----------
+    // Write-only from the app; read in the console.
+    match /feedback/{id} {
+      allow create: if isVendor()
+        && request.resource.data.keys().hasOnly(['uid', 'text', 'page', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'text', 'page', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && isText(request.resource.data.page, 200)
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
     }
 
   }

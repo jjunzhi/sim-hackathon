@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/modal";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import { BookingCard } from "@/components/vendor/booking-card";
 import { LeadStatusBadge } from "@/components/vendor/lead-status";
 import { getVendorCatalog } from "@/lib/data/catalog";
 import { confirmLead, declineLead, getConfirmation, getLead, type ConfirmationRow, type LeadRow } from "@/lib/data/leads";
@@ -190,6 +191,8 @@ export default function LeadPage() {
               {lead.contact?.message && <p className="rounded-lg bg-subtle p-3 text-small">&quot;{lead.contact.message}&quot;</p>}
             </CardBody>
           </Card>
+
+          <BookingCard lead={lead} />
 
           {lead.status === "new" && (
             <Card>

@@ -61,6 +61,76 @@ node scripts/e2e-phase2.mjs
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
 
+## Pilot and billing (Phase 7)
+
+- **Who is listed.** A vendor appears in the catalog (and as a decorator in the Studio) only while its plan is in good standing: a pilot within its dates, an active or trialing Stripe subscription, or a failed payment still inside its 7-day grace period. The server writes a `listed` flag on `vendors/{uid}` and on each venue, and the catalog queries and rules both require it, so no client can list itself. Lapsing hides a vendor from discovery only. Saved plans, family links, leads and confirmations keep working, and nothing is deleted. The rules in `functions/src/billing/standing.ts` are shared by the webhook, the daily sweep, the admin scripts and the vendor's Plan page.
+- **Pilot invites.** `npm run admin -- invite --until 2027-01-31 --note "SAMPLE venue" --project <id>` prints a link like `/sign-up?role=vendor&invite=<code>`. Opening it preselects the vendor role. After sign-up (email or Google), the vendor area redeems the code once (`redeemInvite`), which makes the account a pilot vendor, free until that date. Codes are 128 random bits and single-use. Vendors can also type a code on the Plan page.
+- **Subscription (Stripe).**
+  - "Choose the monthly plan" opens Stripe Checkout in subscription mode, for cards (`createCheckoutSession`). "Manage billing" opens the Stripe Customer Portal for card changes, invoices and cancelling (`createPortalSession`).
+  - The `stripeWebhook` function verifies the signature on the raw body, applies each event once (`stripeEvents/{id}`), and ignores events older than the last one applied, because Stripe doesn't guarantee order.
+  - Status lives in `billing/{uid}`. Vendors can read it; only the server writes it.
+  - A daily job (`dailyListingSweep`, 03:00 Singapore time) ends pilots and grace periods on time.
+  - Deleting a vendor account cancels its subscription first.
+  - PayNow can't be charged automatically for subscriptions (Stripe only supports it on emailed invoices), so it's left for later.
+- **Price and wording.** S$35 a month, set by `NEXT_PUBLIC_PLAN_PRICE_CENTS` for display and `STRIPE_PRICE_ID` for the charge; keep them in step. The note "No GST is charged on the plan." is configurable (`NEXT_PUBLIC_PLAN_PRICE_NOTE`). Change it if you register for GST; IRAS's threshold is S$1 million taxable turnover.
+- **Bookings.** On a confirmed lead, the vendor can "Mark as booked" with the event date and, optionally, the booked value. The couple sees the claim under that vendor in the Studio estimate and answers "Yes, we booked" or "That's not right". Only confirmed bookings count. They appear on the vendor's Plan page as a monthly statement. **Commission is 0% during the pilot and nothing is charged**; `npm run admin -- set-commission <uid> <bps>` sets a rate (up to 5%) and the statement shows it, but charging it is not built.
+- **Onboarding without help.**
+  - A "Get set up" checklist on the vendor Overview is worked out from the vendor's real data (`src/lib/vendors/setup-steps.ts`). Each step links to where it's done.
+  - A readiness list flags what would confuse couples, such as rooms without photos or a venue without an address.
+  - Publishing needs a plan in good standing and says how to get one.
+  - A Help page answers the first questions, and "Send feedback" stores free text and the page it came from (`feedback/{id}`, readable only in the console).
+- **Admin scripts** (`scripts/admin.mjs`, Admin SDK with your Application Default Credentials):
+  - `invite` and `extend-pilot` manage pilot access.
+  - `set-commission` sets a vendor's rate.
+  - `verify <venueId> [--off]` adds or removes the Verified badge.
+  - `sync <uid>` recomputes a vendor's listing.
+  - `export-pilot` prints a CSV of each vendor's milestones (signed up, first venue, published, listed, first lead, first confirmation, first booking, feedback count) to show where pilot vendors stall. It exports no couple data.
+  
+  Every command needs `--project <id>` or `--emulator`.
+- **Deletion.** A vendor's billing record, bookings and feedback go with the account, and a redeemed invite keeps only that it was used. A couple's side of a booking follows option B, like confirmed leads, and is **pending PDPA review**.
+
+UI walkthrough (fresh emulators, `npm run seed`, dev server running):
+
+```bash
+node scripts/e2e-phase7.mjs
+```
+
+## Deploy (Firebase App Hosting)
+
+You run these on your own project; nothing here deploys automatically. Check the current App Hosting docs first: when this was written, the supported-frameworks and quickstart pages didn't load, so **confirm that Next.js 16 is supported and that `asia-southeast1` is offered** when you create the backend.
+
+1. Finish **Firebase setup** above (Blaze plan, asia-southeast1, Auth, App Check, budget alert).
+2. **Stripe (sandbox first):**
+   - Create the product "WeddingVista vendor plan" with a monthly S$35 price, and put its `price_...` in `functions/.env` as `STRIPE_PRICE_ID` (see `functions/.env.example`), with `APP_BASE_URL` set to your site.
+   - In Stripe, turn on the Customer Portal, allowing card updates, invoices and cancellation.
+3. **Secrets for Functions:**
+   - `npx firebase functions:secrets:set STRIPE_SECRET_KEY` (your `sk_test_...` key first, then `sk_live_...`).
+   - `npx firebase functions:secrets:set STRIPE_WEBHOOK_SECRET`.
+   - `GEMINI_API_KEY` as in Phase 3.
+4. **Deploy rules and functions:** `npx firebase deploy --only firestore,storage,functions --project <id>`.
+5. **Webhook:** in Stripe, add an event destination for the `stripeWebhook` URL (`https://asia-southeast1-<id>.cloudfunctions.net/stripeWebhook`). Send `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`, and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+   - To test locally against a Stripe sandbox, run `stripe listen --forward-to http://127.0.0.1:5001/<id>/asia-southeast1/stripeWebhook` and use the secret it prints.
+6. **App Hosting backend:**
+   - Run `npx firebase apphosting:backends:create --project <id>`. It connects your GitHub repository and live branch.
+   - Fill in the public Firebase config in `apphosting.yaml`, as listed in its comments.
+   - Grant secret access if you add any with `npx firebase apphosting:secrets:grantaccess <name>`.
+7. Add your App Hosting domain to the App Check reCAPTCHA key and to the Maps key's allowed referrers.
+8. Create the first pilot invites with `npm run admin -- invite --until <date> --project <id>`, and send each vendor their link.
+
+## Before launch: what only you can do
+
+Each item is something the code can't do on its own; the code side is already in place.
+
+- [ ] **PDPA review of option B** (confirmed leads and bookings kept without the couple's details after deletion): `functions/src/deletion.ts`.
+- [ ] **Native-speaker review** of `src/lib/i18n/dictionaries/zh.ts`, `ms.ts` and `ta.ts`; then set each `status` to `"reviewed"` to remove the "draft translation" note.
+- [ ] **Community review** of the ritual checklists (`src/lib/i18n/dictionaries/en/rituals.ts` and the translations); remove the badge in `src/app/(app)/checklists/page.tsx` once reviewed.
+- [ ] **Consent wording**: replace the DRAFT consent text and bump `CONSENT_VERSION` in `src/lib/legal.ts`.
+- [ ] **GST**: confirm the S$1 million threshold on the IRAS site and keep `NEXT_PUBLIC_PLAN_PRICE_NOTE` accurate.
+- [ ] **Stripe**: switch from sandbox to live keys and Price, with the webhook pointing at production.
+- [ ] **Maps key**: restricted to the Maps Embed API and your domains.
+- [ ] **Budget alert** set, and the render limits (`config/renderLimits`) chosen for the pilot.
+- [ ] **App Check** enforced, with the domains registered.
+
 ## Culture and inclusion (Phase 6)
 
 - **Languages:** English, 中文 (Simplified Chinese), Bahasa Melayu and தமிழ் on every couple screen and the family vote page; the vendor portal stays English. The language menu sits in the header. The choice is kept in this browser (`localStorage`) and, for signed-in users, on the profile (`users/{uid}.locale`, the one profile field a user may change), so it follows them to another device. `<html lang>` follows the choice, and dates use `Intl` in that language, in Singapore time.

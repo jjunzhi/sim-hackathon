@@ -725,6 +725,17 @@ const file: LocaleFile = {
     "studio.dietaryAll": "全部",
     "studio.dietaryHidden_one": "{count} 项食物已被您的筛选条件隐藏。",
     "studio.dietaryHidden_other": "{count} 项食物已被您的筛选条件隐藏。",
+    // ---- booking ----
+    "booking.claimed": "{vendor} 表示您已于 {date} 与他们签约。",
+    "booking.claimedValue": "{vendor} 表示您已于 {date} 与他们签约，金额为 {amount}。",
+    "booking.question": "这是否正确？",
+    "booking.yes": "是的，我们已签约",
+    "booking.no": "这不正确",
+    "booking.why": "您的回复让商家知道哪些签约来自 WeddingVista，不会分享任何其他信息。",
+    "booking.confirmed": "已于 {date} 与 {vendor} 签约。",
+    "booking.disputed": "您表示此签约记录不正确。{vendor} 可以更正后再次询问您。",
+    "booking.failed": "无法保存您的回复，请重试。",
+    "booking.thanks": "谢谢，您的回复已发送。",
   },
 };
 export default file;

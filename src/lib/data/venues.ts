@@ -72,7 +72,7 @@ export async function setVenueStatus(venue: WithId<Venue>, status: Venue["status
 export function watchPublishedVenues(onData: (venues: WithId<Venue>[]) => void, onError: (e: Error) => void): Unsubscribe {
   const { db } = getFirebase();
   return onSnapshot(
-    query(collection(db, "venues"), where("status", "==", "active")),
+    query(collection(db, "venues"), where("status", "==", "active"), where("listed", "==", true)),
     (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Venue) }))),
     onError,
   );

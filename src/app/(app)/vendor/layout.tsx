@@ -5,6 +5,7 @@ import { RequireAuth } from "@/components/auth/require-auth";
 import { VendorTheme } from "@/components/theme-scope";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { BusinessSetup } from "@/components/vendor/business-setup";
+import { PlanBanner } from "@/components/vendor/plan-banner";
 import { VendorNav } from "@/components/vendor/vendor-nav";
 import { useVendor, VendorProvider } from "@/lib/vendors/vendor-context";
 
@@ -42,6 +43,7 @@ function VendorGate({ children }: { children: React.ReactNode }) {
   if (vendor.status === "none") return <BusinessSetup uid={vendor.uid} />;
   return (
     <>
+      <PlanBanner />
       <VendorNav />
       {children}
     </>

@@ -2,6 +2,7 @@
 
 import { doc, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { callableCode, callableMessage } from "@/lib/firebase/callable-error";
 import { getFirebase } from "@/lib/firebase/client";
 import { usageDocIds } from "@/lib/render/usage";
 
@@ -39,10 +40,10 @@ export async function requestRender(req: RenderRequest): Promise<RenderResult> {
     const call = httpsCallable<RenderRequest, RenderResult>(getFirebase().functions, "requestRender", { timeout: 180_000 });
     return (await call(req)).data;
   } catch (err) {
-    const e = err as { code?: string; message?: string };
-    const code = (e.code ?? "").replace("functions/", "");
+    const code = callableCode(err);
+    const message = callableMessage(err);
     const known = ["resource-exhausted", "failed-precondition", "permission-denied", "invalid-argument", "unavailable", "not-found"];
-    throw new RenderError(known.includes(code) && e.message ? e.message : "We couldn't create this render. Please try again.", code);
+    throw new RenderError(known.includes(code) && message ? message : "We couldn't create this render. Please try again.", code);
   }
 }
 

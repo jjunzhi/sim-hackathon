@@ -6,7 +6,7 @@ import { watchSpaces, type WithId } from "@/lib/data/venues";
 import type { CatalogVenue } from "@/lib/venues/catalog";
 import type { Space } from "@/lib/venues/model";
 import { buildPlanEstimates, type PlanEstimates, type VendorCatalog } from "./estimates";
-import type { Plan } from "./model";
+import { parseSelectionKey, type Plan } from "./model";
 
 export interface PlanContext {
   venue: CatalogVenue | null;
@@ -18,6 +18,8 @@ export interface PlanContext {
 /** Venue, room and live estimate for a saved plan (prices are always current). */
 export function usePlanEstimate(plan: Pick<Plan, "venueId" | "spaceId" | "headcount" | "tierKey" | "selections"> | null): PlanContext {
   const venueId = plan?.venueId ?? null;
+  // Vendors this plan already uses stay priced even if they're no longer listed.
+  const usedVendors = plan ? [...new Set(Object.keys(plan.selections).map((k) => parseSelectionKey(k)?.vendorUid).filter((u): u is string => !!u))].sort().join(",") : "";
   const [data, setData] = useState<{ venueId: string; venue: CatalogVenue | null; spaces: WithId<Space>[]; catalogs: VendorCatalog[] } | null>(null);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function usePlanEstimate(plan: Pick<Plan, "venueId" | "spaceId" | "headco
       () => emit(),
     );
     getPublishedVenue(venueId).then(async (venue) => {
-      const catalogs = venue ? await loadVenueCatalogs(venue) : [];
+      const catalogs = venue ? await loadVenueCatalogs(venue, usedVendors ? usedVendors.split(",") : []) : [];
       base = { venue, catalogs };
       emit();
     });
@@ -43,7 +45,7 @@ export function usePlanEstimate(plan: Pick<Plan, "venueId" | "spaceId" | "headco
       cancelled = true;
       unsub();
     };
-  }, [venueId]);
+  }, [venueId, usedVendors]);
 
   if (!plan || !data || data.venueId !== venueId) return { venue: null, space: null, estimates: null, loading: true };
   const space = data.spaces.find((s) => s.id === plan.spaceId) ?? null;

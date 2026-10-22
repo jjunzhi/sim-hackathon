@@ -209,6 +209,39 @@ describe("deleteAccount", () => {
     expect(await docExists("leads/Lother")).toBe(true);
   });
 
+  it("vendor: billing record, bookings and feedback go; a redeemed invite keeps only that it was used", async () => {
+    const me = await signUp(`vendor-b-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "vendor");
+    // STRIPE_SECRET_KEY is "demo" in the emulator, so no Stripe call is made for the subscription id.
+    await seed(env, `billing/${me.uid}`, { status: "active", stripeCustomerId: "cus_x", stripeSubscriptionId: "sub_x", pilotUntilMs: null });
+    await seed(env, "bookings/Lb", { leadId: "Lb", vendorUid: me.uid, coupleUid: "c1", eventDate: "2027-05-22", valueCents: null, status: "confirmed", createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, "bookings/Lother", { leadId: "Lother", vendorUid: "someone-else", coupleUid: "c1", eventDate: "2027-05-22", valueCents: null, status: "claimed", createdAt: fixedTime, updatedAt: fixedTime });
+    await seed(env, "feedback/f1", { uid: me.uid, text: "SAMPLE", page: "/vendor", createdAt: fixedTime });
+    await seed(env, "invites/INVITEcode-0123456789", { pilotUntilMs: Date.now() + 86400_000, redeemedBy: me.uid });
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+    expect(await docExists(`billing/${me.uid}`)).toBe(false);
+    expect(await docExists("bookings/Lb")).toBe(false);
+    expect(await docExists("bookings/Lother")).toBe(true);
+    expect(await docExists("feedback/f1")).toBe(false);
+    let invite: Record<string, unknown> = {};
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      invite = (await getDoc(doc(ctx.firestore(), "invites/INVITEcode-0123456789"))).data() ?? {};
+    });
+    expect(invite.redeemedBy).toBe("deleted-account");
+  });
+
+  it("couple: bookings keep the vendor's record without the couple (option B)", async () => {
+    const me = await signUp(`couple-b-${Date.now()}@example.test`);
+    await seedUser(env, me.uid, "couple");
+    await seed(env, "bookings/Lc", { leadId: "Lc", vendorUid: "vendor-x", coupleUid: me.uid, eventDate: "2027-05-22", valueCents: 100, status: "confirmed", createdAt: fixedTime, updatedAt: fixedTime });
+    expect((await callDelete(me.idToken)).result).toEqual({ deleted: true });
+    let b: Record<string, unknown> = {};
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      b = (await getDoc(doc(ctx.firestore(), "bookings/Lc"))).data() ?? {};
+    });
+    expect(b).toMatchObject({ coupleUid: null, anonymised: true, status: "confirmed", valueCents: 100 });
+  });
+
   it("works for an account that never finished sign-up (no profile)", async () => {
     const me = await signUp(`half-${Date.now()}@example.test`);
     const res = await callDelete(me.idToken);

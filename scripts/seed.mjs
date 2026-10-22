@@ -36,22 +36,30 @@ const photo = (path, w, h, contentType) => ({ path, width: w, height: h, content
 const tax = (serviceChargeBps, gstBps) => ({ serviceChargeBps, gstBps, noServiceChargeNote: "No service charge", noGstNote: "Prices not subject to GST" });
 
 const VENUE_OWNERS = ["sample-venue-1", "sample-venue-2", "sample-venue-3"];
+const PILOT_BILLING = {
+  status: "none", pilotUntilMs: Date.UTC(2099, 0, 1), pastDueSinceMs: null, stripeCustomerId: null, stripeSubscriptionId: null,
+  currentPeriodEndMs: null, cancelAtPeriodEnd: false, commissionBps: 0, lastEventAtMs: null,
+};
 const DECORATOR = "sample-decorator-1";
 
 await env.withSecurityRulesDisabled(async (ctx) => {
   const db = ctx.firestore();
   const st = ctx.storage(`gs://${PROJECT_ID}.appspot.com`);
   const put = async (path, bytes, contentType) => uploadBytes(ref(st, path), bytes, { contentType });
-  const vendor = (uid, businessName, kinds, t2, extra = {}) =>
-    setDoc(doc(db, `vendors/${uid}`), {
+  // SAMPLE vendors are pilot vendors (Phase 7): free and listed until the pilot date.
+  // billing/{uid} is written first so the listing triggers agree with `listed` below.
+  const vendor = async (uid, businessName, kinds, t2, extra = {}) => {
+    await setDoc(doc(db, `billing/${uid}`), { ...PILOT_BILLING, updatedAtMs: Date.now() });
+    await setDoc(doc(db, `vendors/${uid}`), {
       kinds, businessName, description: "SAMPLE business for testing. Not a real vendor.", tax: t2,
-      servesAnyVenue: true, servesVenueIds: [], published: true, createdAt: t, updatedAt: t, ...extra,
+      servesAnyVenue: true, servesVenueIds: [], published: true, listed: true, createdAt: t, updatedAt: t, ...extra,
     });
+  };
   const venue = async (id, ownerUid, o, hue) => {
     await put(`venues/${id}/cover/c1.jpg`, await room(hue), "image/jpeg");
     await setDoc(doc(db, `venues/${id}`), {
       ownerUid, status: "active", verified: false, postalCode: "", description: "", coverPhoto: photo(`venues/${id}/cover/c1.jpg`, 2048, 1536, "image/jpeg"),
-      stepFreeEntrance: false, accessibleToilet: false, accessibleParking: false, menuOptions: [],
+      stepFreeEntrance: false, accessibleToilet: false, accessibleParking: false, menuOptions: [], listed: true,
       createdAt: t, updatedAt: t, ...o,
     });
   };

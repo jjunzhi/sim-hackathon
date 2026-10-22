@@ -6,10 +6,20 @@ import { HttpsError, onCall } from "firebase-functions/https";
 import { logger } from "firebase-functions";
 import { setGlobalOptions } from "firebase-functions/options";
 import { defineSecret } from "firebase-functions/params";
+import { stripeSecretKey } from "./billing/functions.js";
 import { deletionSteps } from "./deletion.js";
 import { handleRenderRequest, parseRequest } from "./render/request-render.js";
 
 export { venueCapacitySummary } from "./venues/trigger.js";
+export {
+  createCheckoutSession,
+  createPortalSession,
+  dailyListingSweep,
+  listingOnVendorCreated,
+  listingOnVenueCreated,
+  redeemInvite,
+  stripeWebhook,
+} from "./billing/functions.js";
 
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 // Empty, "demo" or "none" runs DEMO mode (no AI call, clearly labelled images).
@@ -29,7 +39,8 @@ const enforceAppCheck = process.env.FUNCTIONS_EMULATOR !== "true";
  * Self-service account deletion. Removes all Firestore data and Storage files
  * the user owns, then the Auth account. Safe to retry: every step is idempotent.
  */
-export const deleteAccount = onCall({ enforceAppCheck }, async (request) => {
+// Bound to the Stripe key so a deleted vendor's subscription is cancelled, not left charging.
+export const deleteAccount = onCall({ enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
   const auth = request.auth;
   if (!auth) throw new HttpsError("unauthenticated", "Please sign in first.");
 

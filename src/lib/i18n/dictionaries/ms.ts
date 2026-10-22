@@ -725,6 +725,17 @@ const file: LocaleFile = {
     "studio.dietaryAll": "Semua",
     "studio.dietaryHidden_one": "{count} item makanan disembunyikan oleh penapis anda.",
     "studio.dietaryHidden_other": "{count} item makanan disembunyikan oleh penapis anda.",
+    // ---- booking ----
+    "booking.claimed": "{vendor} menyatakan anda telah membuat tempahan dengan mereka untuk {date}.",
+    "booking.claimedValue": "{vendor} menyatakan anda telah membuat tempahan dengan mereka untuk {date}, berjumlah {amount}.",
+    "booking.question": "Adakah ini betul?",
+    "booking.yes": "Ya, kami telah menempah",
+    "booking.no": "Itu tidak betul",
+    "booking.why": "Jawapan anda memberitahu vendor tempahan mana yang datang melalui WeddingVista. Tiada maklumat lain dikongsi.",
+    "booking.confirmed": "Telah menempah dengan {vendor} untuk {date}.",
+    "booking.disputed": "Anda menyatakan tempahan ini tidak betul. {vendor} boleh membetulkannya dan bertanya semula.",
+    "booking.failed": "Kami tidak dapat menyimpan jawapan anda. Sila cuba lagi.",
+    "booking.thanks": "Terima kasih. Jawapan anda telah dihantar.",
   },
 };
 export default file;

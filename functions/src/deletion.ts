@@ -1,4 +1,6 @@
 import type { Firestore } from "firebase-admin/firestore";
+import { cancelSubscriptionFor } from "./billing/functions.js";
+import { readBilling } from "./billing/standing.js";
 import type { getStorage } from "firebase-admin/storage";
 
 type Bucket = ReturnType<ReturnType<typeof getStorage>["bucket"]>;
@@ -82,6 +84,40 @@ export const deletionSteps: Array<{ name: string; run: (ctx: DeletionContext) =>
       }
       const confs = await db.collection("confirmations").where("coupleUid", "==", uid).get();
       await Promise.all(confs.docs.map((d) => d.ref.update({ coupleUid: null, planId: null })));
+    },
+  },
+  {
+    // Stop the subscription first, so a deleted vendor is never charged again.
+    name: "vendor subscription and billing record",
+    run: async ({ uid, db }) => {
+      const ref = db.doc(`billing/${uid}`);
+      const billing = readBilling((await ref.get()).data());
+      await cancelSubscriptionFor(billing.stripeSubscriptionId);
+      await ref.delete();
+      // A redeemed pilot invite keeps that it was used, not by whom.
+      const invites = await db.collection("invites").where("redeemedBy", "==", uid).get();
+      await Promise.all(invites.docs.map((d) => d.ref.update({ redeemedBy: "deleted-account" })));
+    },
+  },
+  {
+    // Bookings the vendor recorded go with the vendor; feedback it sent too.
+    name: "vendor bookings and feedback",
+    run: async ({ uid, db }) => {
+      const [bookings, feedback] = await Promise.all([
+        db.collection("bookings").where("vendorUid", "==", uid).get(),
+        db.collection("feedback").where("uid", "==", uid).get(),
+      ]);
+      await Promise.all([...bookings.docs, ...feedback.docs].map((d) => d.ref.delete()));
+    },
+  },
+  {
+    // A couple's side of a booking follows option B, like confirmed leads:
+    // the vendor keeps that the booking happened, without the couple's link.
+    // PENDING PDPA REVIEW before launch.
+    name: "couple bookings (anonymised, option B)",
+    run: async ({ uid, db }) => {
+      const bookings = await db.collection("bookings").where("coupleUid", "==", uid).get();
+      await Promise.all(bookings.docs.map((d) => d.ref.update({ coupleUid: null, anonymised: true })));
     },
   },
   {

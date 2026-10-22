@@ -1,4 +1,5 @@
 import { auth } from "./en/auth";
+import { booking } from "./en/booking";
 import { catalog } from "./en/catalog";
 import { common } from "./en/common";
 import { estimate } from "./en/estimate";
@@ -32,4 +33,5 @@ export const en = {
   ...vote,
   ...rituals,
   ...inclusion,
+  ...booking,
 } as const;
