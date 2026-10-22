@@ -183,7 +183,24 @@ function PrintView() {
           <span className="num text-h3">{formatSGD(resolved.combinedTotalCents)}</span>
         </p>
         {resolved.combinedPerGuestCents !== null && <p className="num text-small">{t("print.perGuest", { amount: formatSGD(resolved.combinedPerGuestCents) })}</p>}
+        {plan.budgetCents ? <p className="num text-small">{t("assistant.change.budget", { amount: formatSGD(plan.budgetCents) })}</p> : null}
       </section>
+
+      {plan.timeline && plan.timeline.length > 0 && (
+        <section className="print-avoid-break flex flex-col gap-2">
+          <h2 className="text-h3">
+            {t("assistant.timeline.title")} ({t("assistant.timeline.draft")})
+          </h2>
+          <ol className="num flex flex-col text-small">
+            {plan.timeline.map((e, i) => (
+              <li key={i} className="flex gap-4 border-b border-line py-1.5">
+                <span className="w-14 shrink-0 font-semibold">{e.time}</span>
+                <span>{e.label}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <footer className="flex flex-col gap-1 text-small">
         <p>

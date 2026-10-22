@@ -6,8 +6,9 @@
  */
 import { THEMES } from "../render/themes.js";
 
-export type { Change, ContextOption, ContextSpace, PlanSnapshot, Proposal, TierKey, VenueContext } from "./types.js";
-import type { Change, ContextSpace, PlanSnapshot, Proposal, TierKey, VenueContext } from "./types.js";
+export type { Brief, Change, ContextOption, ContextSpace, ContextVenue, PlanSnapshot, Proposal, ShortlistEntry, TierKey, TimelineEntry, VenueContext } from "./types.js";
+import { BRIEF_DIET_TAGS, BRIEF_LIMITS, BRIEF_TRADITIONS, EMPTY_BRIEF } from "./types.js";
+import type { Brief, Change, ContextSpace, PlanSnapshot, Proposal, ShortlistEntry, TierKey, TimelineEntry, VenueContext } from "./types.js";
 export { applyChanges } from "./types.js";
 
 export const LIMITS = {
@@ -15,6 +16,10 @@ export const LIMITS = {
   quantityMax: 999,
   summaryMax: 400,
   changesMax: 20,
+  labelMax: 40,
+  optionsMax: 3,
+  shortlistMax: 8,
+  reasonMax: 200,
 } as const;
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -33,6 +38,7 @@ export function validateProposal(raw: unknown, ctx: VenueContext, plan: PlanSnap
   const dropped: string[] = [];
   const changes: Change[] = [];
   const summary = typeof a.summary === "string" ? a.summary.trim().slice(0, LIMITS.summaryMax) : "";
+  const label = typeof a.label === "string" ? a.label.trim().slice(0, LIMITS.labelMax) : "";
 
   // Room first: tier validity depends on it.
   let space = ctx.spaces.find((s) => s.id === plan.spaceId) ?? null;
@@ -102,5 +108,78 @@ export function validateProposal(raw: unknown, ctx: VenueContext, plan: PlanSnap
     }
   }
 
-  return { summary, changes: changes.slice(0, LIMITS.changesMax), dropped };
+  if (a.budget !== undefined && a.budget !== null) {
+    // The model speaks in whole dollars; the plan stores integer cents.
+    const dollars = Number(a.budget);
+    const cents = dollars * 100;
+    if (Number.isInteger(dollars) && cents >= 100 && cents <= BRIEF_LIMITS.budgetMaxCents) {
+      if (cents !== plan.budgetCents) changes.push({ kind: "budget", cents });
+    } else dropped.push(`budget ${String(a.budget)}`);
+  }
+
+  const brief = mergeBrief(plan.brief, a, dropped);
+  if (brief) changes.push({ kind: "brief", brief });
+
+  if (Array.isArray(a.timeline)) {
+    const entries = cleanTimeline(a.timeline, dropped);
+    if (entries.length && JSON.stringify(entries) !== JSON.stringify(plan.timeline)) changes.push({ kind: "timeline", entries });
+  }
+
+  return { label, summary, changes: changes.slice(0, LIMITS.changesMax), dropped };
+}
+
+const BRIEF_FIELDS = ["style", "traditions", "dietaryTags", "stepFree", "notes"] as const;
+
+/** The brief after the model's suggested fields, or null when nothing (valid) changes. */
+export function mergeBrief(current: Brief | null, a: Record<string, unknown>, dropped: string[]): Brief | null {
+  if (!BRIEF_FIELDS.some((f) => a[f] !== undefined && a[f] !== null)) return null;
+  const base = current ?? EMPTY_BRIEF;
+  const next: Brief = { ...base, traditions: [...base.traditions], dietaryTags: [...base.dietaryTags] };
+  if (typeof a.style === "string") next.style = a.style.trim().slice(0, BRIEF_LIMITS.styleMax);
+  if (typeof a.notes === "string") next.notes = a.notes.trim().slice(0, BRIEF_LIMITS.notesMax);
+  if (typeof a.stepFree === "boolean") next.stepFree = a.stepFree;
+  const pick = (v: unknown, allowed: readonly string[], what: string) => {
+    if (!Array.isArray(v)) return null;
+    const out: string[] = [];
+    for (const x of v) {
+      if (typeof x === "string" && allowed.includes(x)) {
+        if (!out.includes(x)) out.push(x);
+      } else dropped.push(`${what} ${String(x)}`);
+    }
+    return out;
+  };
+  next.traditions = pick(a.traditions, BRIEF_TRADITIONS, "tradition") ?? next.traditions;
+  next.dietaryTags = pick(a.dietaryTags, BRIEF_DIET_TAGS, "diet") ?? next.dietaryTags;
+  return JSON.stringify(next) === JSON.stringify(base) && current !== null ? null : next;
+}
+
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Valid "HH:MM" lines with a short label, in time order, at most 15. */
+export function cleanTimeline(raw: unknown[], dropped: string[]): TimelineEntry[] {
+  const out: TimelineEntry[] = [];
+  for (const r of raw) {
+    const e = (r ?? {}) as Record<string, unknown>;
+    const time = typeof e.time === "string" ? e.time.trim() : "";
+    const label = typeof e.label === "string" ? e.label.trim().slice(0, BRIEF_LIMITS.timelineLabelMax) : "";
+    if (HHMM.test(time) && label) out.push({ time, label });
+    else dropped.push(`timeline ${time || "?"}`);
+  }
+  return out.sort((x, y) => x.time.localeCompare(y.time)).slice(0, BRIEF_LIMITS.timelineEntries);
+}
+
+/** Keeps only listed venues, once each, with a short reason. */
+export function validateShortlist(raw: unknown, ctx: VenueContext): ShortlistEntry[] {
+  const a = (raw ?? {}) as Record<string, unknown>;
+  const venues = new Map((ctx.venues ?? []).map((v) => [v.id, v]));
+  const out: ShortlistEntry[] = [];
+  for (const entry of Array.isArray(a.venues) ? a.venues : []) {
+    const e = (entry ?? {}) as Record<string, unknown>;
+    const v = typeof e.venueId === "string" ? venues.get(e.venueId) : undefined;
+    if (!v || out.some((o) => o.venueId === v.id)) continue;
+    const reason = typeof e.reason === "string" ? e.reason.trim().slice(0, LIMITS.reasonMax) : "";
+    out.push({ venueId: v.id, venueName: v.name, reason });
+    if (out.length >= LIMITS.shortlistMax) break;
+  }
+  return out;
 }

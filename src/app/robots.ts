@@ -8,7 +8,7 @@ import { SITE_URL } from "@/lib/site";
  */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: "*", allow: ["/", "/venues", "/privacy"], disallow: ["/s/", "/account", "/plans", "/guests", "/checklists", "/vendor", "/welcome", "/design", "/studio"] }],
+    rules: [{ userAgent: "*", allow: ["/", "/venues", "/rose-garden", "/privacy"], disallow: ["/s/", "/account", "/plans", "/guests", "/checklists", "/vendor", "/welcome", "/design", "/studio"] }],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

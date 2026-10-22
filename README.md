@@ -61,12 +61,44 @@ node scripts/e2e-phase2.mjs
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
 
-## Planning assistant, SAMPLE venues and launch pages
+## Aria and Rose Garden
 
-- **Planning assistant** ("Plan with AI" in the Studio; `?assistant=1` opens it). A chat in the couple's language that suggests changes to the plan: guests, room, Peak or Off-Peak, theme, items from the venue's and listed decorators' real inventory, and the wedding date.
-  - Every suggestion is checked against real data on the server (`functions/src/assistant/proposal.ts`) and shown with its effect on the estimate. Nothing changes until the couple taps **Apply**.
-  - Model: `gemini-3.5-flash-lite` (stable), called from the `planAssistant` Cloud Function with the same `GEMINI_API_KEY` secret as renders. With no key it runs a labelled DEMO that understands simple requests.
-  - Limits: 30 messages per couple per day and 3,000 in total per day; override them in `config/assistantLimits`. Conversations are not stored; only the last 12 messages are sent each time.
+Rose Garden is the one couple plan, free during the pilot. `/rose-garden` lists only what the software does. It doesn't offer human planners, tours, insurance, bookings or payments.
+
+**Aria** is the AI planning assistant: "Plan with Aria" in the Studio, or `?assistant=1` to open it. It has four tabs: Chat, Brief, Timeline and Decisions.
+
+- **Chat.** Aria suggests checked changes to the plan:
+  - guests, room, Peak or Off-Peak pricing, theme, and items from real inventory;
+  - the date, the budget, the brief and the day-of timeline.
+- **Several options.** When there is a trade-off, Aria offers two or three labelled options ("Option A", ...). Each card shows its changes and the effect on the estimate, with four buttons:
+  - **Apply**;
+  - **Adjust**: untick changes, or edit the guests, a per-piece quantity or the budget, then Apply selected;
+  - **Find alternatives**;
+  - **Not now**.
+
+  Nothing changes until the couple chooses.
+- **Shortlists and requests.** Aria can shortlist other active, listed venues; opening one starts a separate plan. It can also point the couple to the existing confirmation request, which the couple sends themselves.
+- **Aria noticed.** Pure checks in `src/lib/assistant/alerts.ts` raise an alert in the Studio and in the chat when:
+  - the estimate is over the budget;
+  - the plan or the guest list is over the room's capacity;
+  - a vendor in the plan has blocked the wedding date.
+
+  An alert only describes. Asking Aria for options is a separate tap.
+- **Brief.** The brief holds budget, guests, date, style, traditions, food needs, step-free access and notes. It's saved on the plan, and `firestore.rules` checks its fields and tags.
+- **Timeline.** A DRAFT day-of timeline of up to 15 lines, editable and printed with the plan. The 15-line cap keeps a fully filled plan under Firestore's limit of 1,000 evaluated rule expressions per write; the rule tests check a plan at every limit.
+- **Decision log.** `projects/{id}/decisions` records each Apply, Adjust, Find alternatives and Not now, with the estimate before and after.
+  - It is owner-only and write-once.
+  - Deleting a plan deletes its log (`planDecisionsCleanup` trigger). Account deletion also removes it, through `recursiveDelete`.
+- **Checked on the server.** Every model output is checked in `functions/src/assistant/proposal.ts` (`validateProposal`, `mergeBrief`, `cleanTimeline`, `validateShortlist`, `checkCalls`). Anything not in the real data is dropped, never "fixed up".
+- **Guests.** Aria sees only seat counts by the couple's own tiers. Party labels never reach the model, and it is told never to suggest removing particular people.
+- **Model and limits.**
+  - Model: `gemini-3.5-flash-lite`, called from the `planAssistant` Cloud Function with the `GEMINI_API_KEY` secret. With no key it runs a labelled DEMO that understands simple requests, including "over budget", "too many guests", "other venues", "timeline" and "confirm prices".
+  - Limits: 30 messages per couple per day and 3,000 in total per day; override them in `config/assistantLimits`.
+  - Conversations are not stored; only the last 12 messages are sent each time.
+
+Walkthrough (fresh emulators, `npm run sample-venues -- load --emulator`, dev server running): `node scripts/e2e-aria.mjs` (36 checks; screenshots in `docs/screenshots/aria`).
+
+## SAMPLE venues and launch pages
 - **SAMPLE venues**: `npm run sample-venues -- load --emulator` (or `--project <id>`) loads 9 SAMPLE venues and 3 SAMPLE decorators with rooms, menus, dietary tags, access details and booked dates. The catalog then shows "These are SAMPLE listings for demonstration". `npm run sample-venues -- remove ...` deletes them all, including cached renders. Every name, address and price is fictional and labelled SAMPLE; addresses name only an area.
 - **Room photos** are licensed stock photos (Pexels and Unsplash), checked by eye for people and logos, cropped and stripped of metadata. They are in `scripts/sample-venues/photos`, with credits in `CREDITS.md`. Rooms without a suitable photo use illustrated SAMPLE scenes.
 - **Launch pages**:

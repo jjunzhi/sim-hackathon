@@ -18,7 +18,9 @@ const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
     body: (
       <ul>
         <li>Your account: email address, whether you are a couple or a vendor, your consent record (which wording you agreed to and when), and your chosen language.</li>
-        <li>Your plans: venue, room, guest numbers, theme, chosen items, saved renders and an optional wedding date.</li>
+        <li>Your plans: venue, room, guest numbers, theme, chosen items, saved renders and an optional wedding date, budget and day-of timeline.</li>
+        <li>Your planning brief for Aria (optional): your style in your own words, traditions, food and access needs, and short notes. Please don&apos;t put names or contact details in it.</li>
+        <li>Aria&apos;s decision log: which suggestions you applied, adjusted or set aside, and their effect on the estimate. It is stored with the plan and deleted with it.</li>
         <li>Your guest list helper: the labels you type for each party, tiers and seat counts. We never ask for guests&apos; names or contact details.</li>
         <li>Ritual checklists: which items you ticked and the items you added.</li>
         <li>Family voting: a family member&apos;s vote, plus an optional name or relationship and note. Voters don&apos;t need an account, and we don&apos;t store IP addresses.</li>
@@ -34,7 +36,7 @@ const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
         <li>Your plans, guest list and checklists are visible only to you.</li>
         <li>Family links show only the renders and estimate totals you chose; votes are visible only to you.</li>
         <li>An estimate request goes only to the vendor you send it to, and only with that vendor&apos;s part of your plan.</li>
-        <li>Service providers who run the service for us: Google Firebase (data stored in Singapore), Vercel (website hosting), Stripe (vendor payments) and Google&apos;s Gemini API (AI renders and the planning assistant).</li>
+        <li>Service providers who run the service for us: Google Firebase (data stored in Singapore), Vercel (website hosting), Stripe (vendor payments) and Google&apos;s Gemini API (AI renders and Aria, the planning assistant).</li>
       </ul>
     ),
   },
@@ -43,8 +45,9 @@ const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
     body: (
       <>
         <p>
-          Renders send the room photo, the chosen items&apos; photos and the theme to Google&apos;s Gemini API. The planning assistant sends your messages and this
-          venue&apos;s rooms, prices and your current plan, so it can suggest changes. We don&apos;t store assistant conversations.
+          Renders send the room photo, the chosen items&apos; photos and the theme to Google&apos;s Gemini API. Aria, the planning assistant, sends your messages, this
+          venue&apos;s rooms and prices, other listed venues, your current plan and brief, and your guest list&apos;s seat counts by tier (never the labels you
+          typed), so it can suggest changes. We don&apos;t store the conversations; only the decisions you make are logged on your plan.
         </p>
         <p>
           <strong>To be confirmed before launch:</strong> whether Google may use these requests to improve its products depends on the Gemini plan our account uses.

@@ -1,4 +1,7 @@
 import type { TierKey } from "@/lib/estimate/build";
+import type { Brief, TimelineEntry } from "../../../functions/src/assistant/types";
+
+export type { Brief, TimelineEntry };
 
 /** A couple's saved plan: projects/{id}. Owner-only; mirrors firestore.rules. */
 export interface Plan {
@@ -14,6 +17,11 @@ export interface Plan {
   savedRenders: SavedRender[];
   /** YYYY-MM-DD, optional (Phase 6). Plans saved earlier have no field. */
   weddingDate?: string | null;
+  /** Aria (Rose Garden). Optional: plans saved earlier have none of these. */
+  budgetCents?: number | null;
+  brief?: Brief | null;
+  /** Day-of timeline, a DRAFT the couple edits. */
+  timeline?: TimelineEntry[];
 }
 
 export interface SavedRender {

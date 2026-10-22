@@ -55,9 +55,9 @@ await shot("venue-grand-orchard");
 // 2. Assistant, signed out: asks to save first.
 await u.goto(`${base}/studio/sample-garden-pavilion`);
 await u.waitForText("Plan your day", 20_000);
-await u.clickButton("Plan with AI");
+await u.clickButton("Plan with Aria");
 await u.waitFor("document.querySelector('[role=dialog]')");
-check("assistant signed out: save first", (await dialogText()).includes("Save your plan to use the planning assistant."), true);
+check("assistant signed out: save first", (await dialogText()).includes("Save your plan to use Aria."), true);
 await shot("assistant-signed-out", [1366]);
 await cdp.evaluate("[...document.querySelectorAll('[role=dialog] button')].find(b => b.textContent.trim() === 'Save your plan').click()");
 await u.waitForText("Create your account", 15_000);
@@ -100,7 +100,7 @@ await cdp.evaluate("localStorage.setItem('wv-locale', 'ta')");
 await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&assistant=1`);
 await u.waitFor("document.documentElement.lang === 'ta-SG' && document.querySelector('[role=dialog]')", { timeout: 20_000, what: "Tamil assistant" });
 await sleep(1500);
-check("assistant in Tamil: title translated", (await dialogText()).includes("திட்டமிடல் உதவியாளர்"), true);
+check("assistant in Tamil: tabs translated", (await dialogText()).includes("உரையாடல்"), true);
 await shot("assistant-ta", [390]);
 await cdp.evaluate("localStorage.setItem('wv-locale', 'en')");
 
