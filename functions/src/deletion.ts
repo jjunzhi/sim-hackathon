@@ -34,6 +34,28 @@ export const deletionSteps: Array<{ name: string; run: (ctx: DeletionContext) =>
     },
   },
   {
+    // Renders hold no personal data and are shared between couples, but
+    // they show this vendor's premises or products, so they go with the vendor.
+    name: "renders of this vendor's rooms or items",
+    run: async ({ uid, db, bucket }) => {
+      const byVenue = await db.collection("renders").where("vendorUid", "==", uid).get();
+      const byItems = await db.collection("renders").where("itemVendorUids", "array-contains", uid).get();
+      const docs = new Map([...byVenue.docs, ...byItems.docs].map((d) => [d.id, d]));
+      for (const d of docs.values()) {
+        const path = d.get("path") as string | undefined;
+        if (path) await bucket.file(path).delete({ ignoreNotFound: true });
+        await d.ref.delete();
+      }
+    },
+  },
+  {
+    name: "render usage counters",
+    run: async ({ uid, db }) => {
+      const usage = await db.collection("usage").where("subject", "==", uid).get();
+      await Promise.all(usage.docs.map((d) => d.ref.delete()));
+    },
+  },
+  {
     name: "user files",
     run: async ({ uid, bucket }) => {
       await bucket.deleteFiles({ prefix: `users/${uid}/` });

@@ -2,7 +2,7 @@
 
 A Singapore wedding venue and decor platform. Vendors load their real spaces, decor and prices. Couples see their chosen room decorated with only items the vendor can deliver, and get an honest itemised estimate.
 
-**Status: Phase 2, inventory and estimate engine.** Builds on Phase 1 (auth, roles, PDPA consent, venue onboarding, photo uploads, security rules, account deletion). Phase 2 adds:
+**Status: Phase 3, AI render (server-side, cached, with limits and a DEMO mode).** Earlier, **Phase 2, inventory and estimate engine.** Builds on Phase 1 (auth, roles, PDPA consent, venue onboarding, photo uploads, security rules, account deletion). Phase 2 adds:
 
 - business profiles with decorator onboarding;
 - inventory and packages;
@@ -54,6 +54,35 @@ node scripts/e2e-phase2.mjs
 ```
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
+
+## AI renders (Phase 3)
+
+`requestRender` is a Cloud Function in asia-southeast1. It renders the real room photo decorated with only the selected, deliverable items, using Gemini (`gemini-nano-banana-2.1`, 1K) through `@google/genai`.
+
+- **The API key stays on the server.** Set it with `npx firebase functions:secrets:set GEMINI_API_KEY`. For the emulators, put it in `functions/.secret.local`, which is git-ignored. Never use a `NEXT_PUBLIC_` variable. A scan of the built browser files finds no key, SDK or endpoint.
+- **DEMO mode** runs when the key is empty, `demo` or `none`, which is the default in `functions/.secret.local`. It takes the real room photo, adds a theme colour wash, and stamps "DEMO PREVIEW · not an AI render" on it. No AI service is called and nothing is spent. Caching and limits work exactly as in real mode.
+- **Cache:** the key is a SHA-256 of the space, the space photo version, the theme, the sorted item IDs (each with its photo revision), the prompt-template version and the model. A hit uses no quota and no API call.
+  - Renders contain no personal data and are shared between couples.
+  - Deleting a vendor deletes renders of their rooms or items.
+- **Limits** (Singapore days and months):
+  - 10 per person per day and 40 per month;
+  - 300 per vendor per month;
+  - 200 per day in total.
+
+  An admin overrides any of these in the Firestore document `config/renderLimits`, using the fields `userPerDay`, `userPerMonth`, `vendorPerMonth` and `globalPerDay`. Quota is reserved before the call and refunded if it fails.
+- **Who can render:**
+  - A couple can render published venues; a vendor can also render its own drafts.
+  - Items must be active and have a photo.
+  - Items must come from the venue's owner, or from a published decorator who works at that venue.
+- **Cost:** about US$0.034 per real render at 1K. There's no free tier for image output, so set the budget alert below before adding a real key.
+- **Data use:** Gemini's paid-tier terms say prompts and images aren't used to improve Google's products, but are logged for a limited time to check for misuse. Every image carries Google's SynthID watermark.
+- **Theme wording** needs community review before launch (`functions/src/render/themes.ts`).
+
+UI walkthrough (fresh emulators and dev server running):
+
+```bash
+node scripts/e2e-phase3.mjs
+```
 
 ## Estimate engine
 

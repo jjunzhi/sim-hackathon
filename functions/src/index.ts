@@ -5,7 +5,13 @@ import { getStorage } from "firebase-admin/storage";
 import { HttpsError, onCall } from "firebase-functions/https";
 import { logger } from "firebase-functions";
 import { setGlobalOptions } from "firebase-functions/options";
+import { defineSecret } from "firebase-functions/params";
 import { deletionSteps } from "./deletion.js";
+import { handleRenderRequest, parseRequest } from "./render/request-render.js";
+
+// Set with: firebase functions:secrets:set GEMINI_API_KEY
+// Empty, "demo" or "none" runs DEMO mode (no AI call, clearly labelled images).
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 initializeApp();
 setGlobalOptions({ region: "asia-southeast1", maxInstances: 10 });
@@ -50,3 +56,25 @@ export const deleteAccount = onCall({ enforceAppCheck }, async (request) => {
   logger.info("deleteAccount complete", { uid, role });
   return { deleted: true };
 });
+
+/**
+ * AI render of a real room decorated with only the selected, deliverable
+ * items. Cached by content (see render/cache-key.ts); quota is reserved
+ * before calling the model and refunded on failure.
+ */
+export const requestRender = onCall(
+  { enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 180, memory: "1GiB" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
+    const req = parseRequest(request.data);
+    const raw = (geminiApiKey.value() ?? "").trim();
+    const apiKey = raw && !["demo", "none"].includes(raw.toLowerCase()) ? raw : null;
+    return handleRenderRequest(request.auth.uid, req, {
+      db: getFirestore(),
+      bucket: getStorage().bucket(),
+      apiKey,
+      now: () => new Date(),
+      emulator: process.env.FUNCTIONS_EMULATOR === "true",
+    });
+  },
+);

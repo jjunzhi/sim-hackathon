@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { EstimateView } from "@/components/estimate/estimate-view";
+import { RenderPanel } from "@/components/render/render-panel";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Card, CardBody } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +17,7 @@ import { calculateEstimate, EstimateError } from "@/lib/estimate/engine";
 import type { InventoryItem, InventoryPackage } from "@/lib/inventory/model";
 import { UNIT_LABELS } from "@/lib/inventory/model";
 import { formatSGD } from "@/lib/money";
+import { THEME_OPTIONS } from "@/lib/render/themes";
 import type { Space, Venue } from "@/lib/venues/model";
 import { useVendor } from "@/lib/vendors/vendor-context";
 
@@ -32,6 +34,7 @@ export default function EstimatePreviewPage() {
   const [tierKey, setTierKey] = useState<TierKey | null>(null);
   const [headcount, setHeadcount] = useState(100);
   const [chosen, setChosen] = useState<Chosen>({});
+  const [themeId, setThemeId] = useState<string>(THEME_OPTIONS[0].value);
 
   useEffect(() => {
     if (!uid) return;
@@ -77,6 +80,21 @@ export default function EstimatePreviewPage() {
       return next;
     });
   }
+
+  // Render: chosen items plus the items inside chosen packages, photo required, at most 10.
+  const renderItemIds = [
+    ...new Set([
+      ...activeItems.filter((i) => chosen[`item:${i.id}`] !== undefined).map((i) => i.id),
+      ...activePackages.filter((p) => chosen[`package:${p.id}`] !== undefined).flatMap((p) => p.itemIds),
+    ]),
+  ];
+  const withPhoto = renderItemIds.filter((id) => activeItems.find((i) => i.id === id)?.photo);
+  const withoutPhoto = renderItemIds.length - withPhoto.length;
+  const [venueId, spaceId] = room === DECOR_ONLY ? [null, null] : room.split("/");
+  const renderRequest =
+    uid && venueId && spaceId ? { venueId, spaceId, themeId, items: withPhoto.slice(0, 10).map((itemId) => ({ vendorUid: uid, itemId })) } : null;
+  const renderBlocked =
+    withPhoto.length > 10 ? "Renders can show up to 10 items. Deselect a few to render." : !space?.photo && space ? "This room needs a photo before it can be rendered." : null;
 
   let result: { estimate: ReturnType<typeof calculateEstimate> } | { error: string } | null = null;
   if (vendor.status === "ready") {
@@ -181,6 +199,20 @@ export default function EstimatePreviewPage() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardBody className="grid gap-6 lg:grid-cols-[18rem_1fr]">
+          <div className="flex flex-col gap-4">
+            <Select label="Theme" options={[...THEME_OPTIONS]} value={themeId} onValueChange={setThemeId} hint="Cultural themes are pending community review." />
+            {withoutPhoto > 0 && (
+              <p className="text-small text-muted">
+                {withoutPhoto} selected {withoutPhoto === 1 ? "item has" : "items have"} no photo, so {withoutPhoto === 1 ? "it isn't" : "they aren't"} shown in renders. The estimate still includes {withoutPhoto === 1 ? "it" : "them"}.
+              </p>
+            )}
+          </div>
+          <RenderPanel request={renderRequest} roomPhoto={space?.photo ?? null} disabledReason={room === DECOR_ONLY ? "Choose a room to render it decorated." : renderBlocked} />
+        </CardBody>
+      </Card>
     </main>
   );
 }

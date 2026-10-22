@@ -7,6 +7,7 @@ import { StorageImage } from "@/components/photos/storage-image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState, SkeletonList } from "@/components/ui/skeleton";
+import { watchVendorUsage } from "@/lib/data/renders";
 import { watchItems, watchPackages } from "@/lib/data/vendors";
 import { watchMyVenues, type WithId } from "@/lib/data/venues";
 import type { InventoryItem, InventoryPackage } from "@/lib/inventory/model";
@@ -24,11 +25,17 @@ export default function VendorOverview() {
   const [items, setItems] = useState<WithId<InventoryItem>[] | null>(null);
   const [packages, setPackages] = useState<WithId<InventoryPackage>[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
 
   useEffect(() => {
     if (!uid) return;
     const onErr = () => setError("We couldn't load everything. Please refresh the page.");
-    const subs = [watchMyVenues(uid, setVenues, onErr), watchItems(uid, setItems, onErr), watchPackages(uid, setPackages, onErr)];
+    const subs = [
+      watchMyVenues(uid, setVenues, onErr),
+      watchItems(uid, setItems, onErr),
+      watchPackages(uid, setPackages, onErr),
+      watchVendorUsage(uid, setUsage),
+    ];
     return () => subs.forEach((u) => u());
   }, [uid]);
 
@@ -55,7 +62,7 @@ export default function VendorOverview() {
         </p>
       )}
 
-      <section aria-labelledby="inv-h" className="grid gap-5 sm:grid-cols-2">
+      <section aria-labelledby="inv-h" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <h2 id="inv-h" className="sr-only">
           Inventory
         </h2>
@@ -77,6 +84,28 @@ export default function VendorOverview() {
             <Link href="/vendor/packages" className={textLink}>
               Manage packages <ArrowRight aria-hidden className="size-4" />
             </Link>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="flex flex-col gap-2">
+            <p className="text-small text-muted">AI renders this month</p>
+            <p className="num font-display text-h2">{usage ? `${usage.used} of ${usage.limit}` : "..."}</p>
+            {usage && (
+              <div
+                role="meter"
+                aria-label="Renders used this month"
+                aria-valuemin={0}
+                aria-valuemax={usage.limit}
+                aria-valuenow={usage.used}
+                className="h-2 overflow-hidden rounded-full bg-subtle"
+              >
+                <div
+                  className="h-full origin-left rounded-full bg-accent transition-transform duration-300"
+                  style={{ transform: `scaleX(${usage.limit ? Math.min(1, usage.used / usage.limit) : 0})` }}
+                />
+              </div>
+            )}
+            <p className="text-small text-muted">Counts renders of your rooms by anyone. Saved renders that are reused don&apos;t count.</p>
           </CardBody>
         </Card>
       </section>

@@ -282,6 +282,26 @@ service cloud.firestore {
       }
     }
 
+    // ---------- renders (written only by the requestRender function) ----------
+    // No personal data; shared between couples. Family members viewing a share
+    // link sign in anonymously, which counts as signed in.
+    match /renders/{key} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Render usage counters: each person sees only their own (vendors see their venue's).
+    match /usage/{id} {
+      allow read: if signedIn() && resource.data.subject == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Render limits are not secret; only an admin changes them (console / Admin SDK).
+    match /config/renderLimits {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Everything else is closed.
     match /{document=**} {
       allow read, write: if false;
