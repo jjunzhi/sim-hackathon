@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Sample illustration: the same hall decorated with florals, draped tables and warm lighting">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4E6DF"/>
+      <stop offset="1" stop-color="#E8D3C9"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9B3A3"/>
+      <stop offset="1" stop-color="#AE9585"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.3" r="0.6">
+      <stop offset="0" stop-color="#FFF4DA" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#FFF4DA" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="560" fill="url(#wall)"/>
+  <rect y="560" width="1200" height="340" fill="url(#floor)"/>
+  <rect width="1200" height="900" fill="url(#glow)"/>
+  <!-- drapes -->
+  <g fill="#F9ECEF" opacity="0.9">
+    <path d="M0 0 Q150 120 300 0 Z"/>
+    <path d="M300 0 Q450 120 600 0 Z"/>
+    <path d="M600 0 Q750 120 900 0 Z"/>
+    <path d="M900 0 Q1050 120 1200 0 Z"/>
+  </g>
+  <!-- fairy lights -->
+  <g fill="#F5D58E">
+    <circle cx="150" cy="96" r="5"/><circle cx="450" cy="96" r="5"/><circle cx="750" cy="96" r="5"/><circle cx="1050" cy="96" r="5"/>
+    <circle cx="75" cy="64" r="4"/><circle cx="225" cy="64" r="4"/><circle cx="375" cy="64" r="4"/><circle cx="525" cy="64" r="4"/>
+    <circle cx="675" cy="64" r="4"/><circle cx="825" cy="64" r="4"/><circle cx="975" cy="64" r="4"/><circle cx="1125" cy="64" r="4"/>
+  </g>
+  <!-- windows with sheer curtains -->
+  <g stroke="#C9A98F" stroke-width="6">
+    <rect x="90" y="150" width="190" height="300" rx="6" fill="#E6D9D2"/>
+    <rect x="920" y="150" width="190" height="300" rx="6" fill="#E6D9D2"/>
+  </g>
+  <!-- floral arch on stage -->
+  <rect x="380" y="430" width="440" height="130" fill="#EAD7CD"/>
+  <path d="M440 430 V280 A160 160 0 0 1 760 280 V430" fill="none" stroke="#B8935A" stroke-width="10"/>
+  <g>
+    <circle cx="440" cy="300" r="34" fill="#E7A9B5"/><circle cx="470" cy="230" r="30" fill="#F4D3D9"/>
+    <circle cx="530" cy="170" r="32" fill="#B84C60"/><circle cx="600" cy="150" r="34" fill="#F4D3D9"/>
+    <circle cx="670" cy="170" r="32" fill="#E7A9B5"/><circle cx="730" cy="230" r="30" fill="#B84C60"/>
+    <circle cx="760" cy="300" r="34" fill="#F4D3D9"/>
+    <circle cx="500" cy="200" r="16" fill="#7E9C7A"/><circle cx="700" cy="200" r="16" fill="#7E9C7A"/>
+    <circle cx="450" cy="260" r="14" fill="#7E9C7A"/><circle cx="750" cy="260" r="14" fill="#7E9C7A"/>
+  </g>
+  <!-- draped tables with centrepieces -->
+  <g fill="#FFFFFF">
+    <path d="M100 700 Q100 790 130 800 H310 Q340 790 340 700 Z"/>
+    <path d="M470 740 Q470 840 500 850 H700 Q730 840 730 740 Z"/>
+    <path d="M860 700 Q860 790 890 800 H1070 Q1100 790 1100 700 Z"/>
+  </g>
+  <g fill="#F7EFEA">
+    <ellipse cx="220" cy="700" rx="120" ry="34"/>
+    <ellipse cx="600" cy="740" rx="130" ry="36"/>
+    <ellipse cx="980" cy="700" rx="120" ry="34"/>
+  </g>
+  <g>
+    <circle cx="220" cy="676" r="22" fill="#E7A9B5"/><circle cx="204" cy="684" r="12" fill="#7E9C7A"/>
+    <circle cx="600" cy="714" r="24" fill="#B84C60"/><circle cx="582" cy="722" r="12" fill="#7E9C7A"/>
+    <circle cx="980" cy="676" r="22" fill="#F4D3D9"/><circle cx="996" cy="684" r="12" fill="#7E9C7A"/>
+  </g>
+  <!-- label -->
+  <rect x="830" y="820" width="330" height="48" rx="24" fill="#FFFFFF" opacity="0.92"/>
+  <text x="995" y="852" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#2A2325" letter-spacing="2">SAMPLE ILLUSTRATION</text>
+</svg>
