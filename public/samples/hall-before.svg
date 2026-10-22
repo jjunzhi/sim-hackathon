@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Sample illustration: an empty function hall">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9E4DE"/>
+      <stop offset="1" stop-color="#D9D2CA"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BDB3A8"/>
+      <stop offset="1" stop-color="#A39888"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="560" fill="url(#wall)"/>
+  <rect y="560" width="1200" height="340" fill="url(#floor)"/>
+  <!-- ceiling panels -->
+  <g fill="#F2EEE9" opacity="0.8">
+    <rect x="160" y="40" width="240" height="24" rx="4"/>
+    <rect x="480" y="40" width="240" height="24" rx="4"/>
+    <rect x="800" y="40" width="240" height="24" rx="4"/>
+  </g>
+  <!-- windows -->
+  <g fill="#C9D3D6" stroke="#B9B0A6" stroke-width="6">
+    <rect x="90" y="150" width="190" height="300" rx="6"/>
+    <rect x="920" y="150" width="190" height="300" rx="6"/>
+  </g>
+  <!-- stage platform -->
+  <rect x="380" y="430" width="440" height="130" fill="#C7BDB2"/>
+  <rect x="380" y="430" width="440" height="14" fill="#B3A89C"/>
+  <!-- bare round tables -->
+  <g fill="#9E9384">
+    <ellipse cx="220" cy="700" rx="120" ry="34"/>
+    <ellipse cx="600" cy="740" rx="130" ry="36"/>
+    <ellipse cx="980" cy="700" rx="120" ry="34"/>
+  </g>
+  <g fill="#8A7F71">
+    <rect x="212" y="700" width="16" height="90"/>
+    <rect x="592" y="740" width="16" height="100"/>
+    <rect x="972" y="700" width="16" height="90"/>
+  </g>
+  <!-- label -->
+  <rect x="40" y="820" width="330" height="48" rx="24" fill="#FFFFFF" opacity="0.92"/>
+  <text x="205" y="852" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#2A2325" letter-spacing="2">SAMPLE ILLUSTRATION</text>
+</svg>
