@@ -35,6 +35,8 @@ export const catalog = {
   "catalog.noMatch": "No venues match all of these",
   "catalog.noMatchHint": "Try removing a filter or changing the number of guests.",
   "catalog.noneListed": "No venues are listed yet. Please check back soon.",
+  "catalog.noneListedTitle": "No venues yet",
+  "catalog.sampleNote": "These are SAMPLE listings for demonstration. The venues, vendors and prices are not real.",
   "catalog.showVenues": "Show venues",
   "catalog.showCount_one": "Show {count} venue",
   "catalog.showCount_other": "Show {count} venues",

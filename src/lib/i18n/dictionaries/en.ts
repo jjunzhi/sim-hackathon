@@ -1,3 +1,4 @@
+import { assistant } from "./en/assistant";
 import { auth } from "./en/auth";
 import { booking } from "./en/booking";
 import { catalog } from "./en/catalog";
@@ -34,4 +35,5 @@ export const en = {
   ...rituals,
   ...inclusion,
   ...booking,
+  ...assistant,
 } as const;

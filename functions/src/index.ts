@@ -8,6 +8,7 @@ import { setGlobalOptions } from "firebase-functions/options";
 import { defineSecret } from "firebase-functions/params";
 import { stripeSecretKey } from "./billing/functions.js";
 import { deletionSteps } from "./deletion.js";
+import { handleAssistantRequest, parseAssistantRequest } from "./assistant/assistant.js";
 import { handleRenderRequest, parseRequest } from "./render/request-render.js";
 
 export { venueCapacitySummary } from "./venues/trigger.js";
@@ -93,3 +94,19 @@ export const requestRender = onCall(
     });
   },
 );
+
+/**
+ * Planning assistant: a chat that suggests checked changes to a couple's plan
+ * (guests, room, tier, theme, items, date). Couples apply suggestions
+ * themselves. Same key as renders; with no key it runs a labelled DEMO.
+ */
+export const planAssistant = onCall({ enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 60, memory: "512MiB" }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
+  if (request.auth.token.firebase?.sign_in_provider === "anonymous") throw new HttpsError("permission-denied", "Please create an account to use the planning assistant.");
+  const profile = await getFirestore().doc(`users/${request.auth.uid}`).get();
+  if (profile.get("role") !== "couple") throw new HttpsError("permission-denied", "The planning assistant is for couples' plans.");
+  const req = parseAssistantRequest(request.data);
+  const raw = (geminiApiKey.value() ?? "").trim();
+  const apiKey = raw && !["demo", "none"].includes(raw.toLowerCase()) ? raw : null;
+  return handleAssistantRequest(request.auth.uid, req, { db: getFirestore(), apiKey, now: () => new Date() });
+});

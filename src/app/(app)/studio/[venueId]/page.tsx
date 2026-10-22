@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Bookmark, CalendarPlus, Check, Printer, Share2, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Bookmark, CalendarPlus, Check, Printer, Share2, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { StorageImage } from "@/components/photos/storage-image";
@@ -11,6 +11,8 @@ import { RenderPanel } from "@/components/render/render-panel";
 import { FamilyLinks } from "@/components/sharing/family-links";
 import { CapacityStatus } from "@/components/studio/capacity-status";
 import { ItemPicker } from "@/components/studio/item-picker";
+import { PlanAssistant } from "@/components/studio/plan-assistant";
+import type { ChatMessage } from "@/lib/assistant/client";
 import { ResolvedEstimates } from "@/components/studio/resolved-estimates";
 import { resolvePlan } from "@/lib/leads/resolve";
 import { useCoupleConfirmations } from "@/lib/leads/use-couple-confirmations";
@@ -92,6 +94,9 @@ function Studio() {
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  // The planning assistant's conversation lives only in this page.
+  const [assistantOpen, setAssistantOpen] = useState(() => params.get("assistant") === "1");
+  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [direction, setDirection] = useState(1);
   const [lastRender, setLastRender] = useState<RenderResult | null>(null);
   const lastSaved = useRef<string>("");
@@ -312,6 +317,10 @@ function Studio() {
               <h1 className="text-h1">{saved ? plan.name : t("studio.planYourDay")}</h1>
               <p className="text-muted">{venue.name}</p>
             </div>
+            <div className="flex flex-wrap items-center gap-3">
+            <Button variant="secondary" onClick={() => setAssistantOpen(true)} icon={<Sparkles aria-hidden className="size-4" />}>
+              {t("assistant.open")}
+            </Button>
             {saved ? (
               <p className="flex items-center gap-1.5 text-small text-muted" aria-live="polite">
                 {saveState === "saving" ? t("common.saving") : saveState === "error" ? t("studio.notSaved") : (
@@ -325,6 +334,7 @@ function Studio() {
                 {auth.status === "signed-out" ? t("studio.saveYourPlan") : t("studio.savePlan")}
               </Button>
             )}
+            </div>
           </div>
           {planError && (
             <p role="alert" className="text-error">
@@ -334,6 +344,34 @@ function Studio() {
         </div>
 
         <JourneyStepper steps={STEPS} current={stepIndex} onStepChange={goTo} allowForward label={t("studio.planningSteps")} />
+
+        {catalogs && spaces && (
+          <PlanAssistant
+            open={assistantOpen}
+            onOpenChange={setAssistantOpen}
+            venue={venue}
+            spaces={spaces}
+            catalogs={catalogs}
+            plan={plan}
+            canUse={saved && canSave}
+            onSave={() => {
+              setAssistantOpen(false);
+              savePlan();
+            }}
+            onApply={(next) =>
+              update({
+                headcount: next.headcount,
+                spaceId: next.spaceId,
+                tierKey: next.tierKey,
+                themeId: next.themeId,
+                weddingDate: next.weddingDate ?? null,
+                selections: next.selections,
+              })
+            }
+            messages={chat}
+            setMessages={setChat}
+          />
+        )}
 
         {resolved && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-subtle px-4 py-3">

@@ -25,4 +25,6 @@ export const landing = {
   "landing.hero.caption": "SAMPLE illustration. Real renders use the venue's own photos and decor.",
   "landing.hero.showBefore": "Show the room before",
   "landing.hero.showAfter": "Show it decorated",
+  "landing.privacy": "Privacy notice",
+  "landing.footer": "Prices shown are estimates until a vendor confirms them.",
 } as const;

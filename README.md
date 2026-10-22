@@ -61,6 +61,27 @@ node scripts/e2e-phase2.mjs
 
 It drives a real Chrome through decorator sign-up, inventory, a package, publishing and the estimate preview. It checks the totals against `docs/estimate-examples.md` and saves screenshots to `docs/screenshots/phase2`.
 
+## Planning assistant, SAMPLE venues and launch pages
+
+- **Planning assistant** ("Plan with AI" in the Studio; `?assistant=1` opens it). A chat in the couple's language that suggests changes to the plan: guests, room, Peak or Off-Peak, theme, items from the venue's and listed decorators' real inventory, and the wedding date.
+  - Every suggestion is checked against real data on the server (`functions/src/assistant/proposal.ts`) and shown with its effect on the estimate. Nothing changes until the couple taps **Apply**.
+  - Model: `gemini-3.5-flash-lite` (stable), called from the `planAssistant` Cloud Function with the same `GEMINI_API_KEY` secret as renders. With no key it runs a labelled DEMO that understands simple requests.
+  - Limits: 30 messages per couple per day and 3,000 in total per day; override them in `config/assistantLimits`. Conversations are not stored; only the last 12 messages are sent each time.
+- **SAMPLE venues**: `npm run sample-venues -- load --emulator` (or `--project <id>`) loads 9 SAMPLE venues and 3 SAMPLE decorators with rooms, menus, dietary tags, access details and booked dates. The catalog then shows "These are SAMPLE listings for demonstration". `npm run sample-venues -- remove ...` deletes them all, including cached renders. Every name, address and price is fictional and labelled SAMPLE; addresses name only an area.
+- **Room photos** are licensed stock photos (Pexels and Unsplash), checked by eye for people and logos, cropped and stripped of metadata. They are in `scripts/sample-venues/photos`, with credits in `CREDITS.md`. Rooms without a suitable photo use illustrated SAMPLE scenes.
+- **Launch pages**:
+  - `/privacy` (a DRAFT notice, to be reviewed against the PDPA, linked from sign-up and the landing page).
+  - A branded 404 and error page.
+  - `robots.txt` (family links `/s/` and signed-in areas are never indexed) and `sitemap.xml`.
+  - A share preview image, and page metadata from `NEXT_PUBLIC_SITE_URL`.
+  - Security headers in `next.config.ts`. A full Content-Security-Policy is still to do; it needs a tested allow-list for Firebase, reCAPTCHA and Maps.
+
+Walkthrough (fresh emulators, `npm run sample-venues -- load --emulator`, dev server running):
+
+```bash
+node scripts/e2e-launch.mjs
+```
+
 ## Pilot and billing (Phase 7)
 
 - **Who is listed.** A vendor appears in the catalog (and as a decorator in the Studio) only while its plan is in good standing: a pilot within its dates, an active or trialing Stripe subscription, or a failed payment still inside its 7-day grace period. The server writes a `listed` flag on `vendors/{uid}` and on each venue, and the catalog queries and rules both require it, so no client can list itself. Lapsing hides a vendor from discovery only. Saved plans, family links, leads and confirmations keep working, and nothing is deleted. The rules in `functions/src/billing/standing.ts` are shared by the webhook, the daily sweep, the admin scripts and the vendor's Plan page.

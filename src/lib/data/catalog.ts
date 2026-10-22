@@ -75,3 +75,13 @@ export async function loadVenueCatalogs(venue: Pick<CatalogVenue, "id" | "ownerU
   const all = await Promise.all(uids.map(getVendorCatalog));
   return all.filter((c): c is VendorCatalog => c !== null);
 }
+
+/** config/catalog: public flags for the catalog page (sampleListings while demo data is loaded). */
+export function watchCatalogConfig(onData: (c: { sampleListings: boolean }) => void): Unsubscribe {
+  const { db } = getFirebase();
+  return onSnapshot(
+    doc(db, "config", "catalog"),
+    (snap) => onData({ sampleListings: snap.get("sampleListings") === true }),
+    () => onData({ sampleListings: false }),
+  );
+}
