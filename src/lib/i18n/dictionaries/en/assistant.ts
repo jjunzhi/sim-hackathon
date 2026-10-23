@@ -134,6 +134,7 @@ export const assistant = {
   "aria.guestLink": "Create a free account to save your plans",
   // ---- guest itinerary (Share step) ----
   "itinerary.title": "Guest itinerary",
+  "itinerary.saveFirst": "Save your plan to create a guest itinerary: Aria drafts the day for your guests, you approve it, and it becomes a designed itinerary to download or print.",
   "itinerary.intro": "Aria drafts your wedding day's schedule for guests. Edit anything, then approve it to turn it into a designed itinerary you can share.",
   "itinerary.create": "Create our itinerary",
   "itinerary.prompt": "Please draft a day-of timeline for our guests: a clear, friendly itinerary from arrival to send-off, in guest-facing wording.",

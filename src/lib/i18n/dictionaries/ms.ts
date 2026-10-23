@@ -913,6 +913,7 @@ const file: LocaleFile = {
     "floor.download": "Muat turun pelan lantai",
     // ---- guest itinerary (Share step) ----
     "itinerary.title": "Atur cara tetamu",
+    "itinerary.saveFirst": "Simpan pelan anda untuk mencipta atur cara tetamu: Aria merangka hari itu untuk tetamu anda, anda meluluskannya, dan ia menjadi atur cara yang direka cantik untuk dimuat turun atau dicetak.",
     "itinerary.intro": "Aria merangka jadual hari perkahwinan anda untuk tetamu. Ubah apa sahaja, kemudian luluskan untuk menjadikannya atur cara yang direka cantik untuk dikongsi.",
     "itinerary.create": "Cipta atur cara kami",
     "itinerary.prompt": "Sila rangka atur cara hari majlis untuk tetamu kami: jelas dan mesra, dari ketibaan hingga majlis berakhir, dengan kata-kata untuk tetamu.",
