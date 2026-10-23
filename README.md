@@ -147,7 +147,7 @@ node scripts/e2e-launch.mjs
   - A daily job (`dailyListingSweep`, 03:00 Singapore time) ends pilots and grace periods on time.
   - Deleting a vendor account cancels its subscription first.
   - PayNow can't be charged automatically for subscriptions (Stripe only supports it on emailed invoices), so it's left for later.
-- **Price and wording.** S$35 a month, set by `NEXT_PUBLIC_PLAN_PRICE_CENTS` for display and `STRIPE_PRICE_ID` for the charge; keep them in step. The note "No GST is charged on the plan." is configurable (`NEXT_PUBLIC_PLAN_PRICE_NOTE`). Change it if you register for GST; IRAS's threshold is S$1 million taxable turnover.
+- **Price and wording.** S$99 a month, set by `NEXT_PUBLIC_PLAN_PRICE_CENTS` for display and `STRIPE_PRICE_ID` for the charge; keep them in step. The note "No GST is charged on the plan." is configurable (`NEXT_PUBLIC_PLAN_PRICE_NOTE`). Change it if you register for GST; IRAS's threshold is S$1 million taxable turnover.
 - **Bookings.** On a confirmed lead, the vendor can "Mark as booked" with the event date and, optionally, the booked value. The couple sees the claim under that vendor in the Studio estimate and answers "Yes, we booked" or "That's not right". Only confirmed bookings count. They appear on the vendor's Plan page as a monthly statement. **Commission is 0% during the pilot and nothing is charged**; `npm run admin -- set-commission <uid> <bps>` sets a rate (up to 5%) and the statement shows it, but charging it is not built.
 - **Onboarding without help.**
   - A "Get set up" checklist on the vendor Overview is worked out from the vendor's real data (`src/lib/vendors/setup-steps.ts`). Each step links to where it's done.
@@ -176,7 +176,7 @@ You run these on your own project; nothing here deploys automatically. Check the
 
 1. Finish **Firebase setup** above (Blaze plan, asia-southeast1, Auth, App Check, budget alert).
 2. **Stripe (sandbox first):**
-   - Create the product "WeddingVista vendor plan" with a monthly S$35 price, and put its `price_...` in `functions/.env` as `STRIPE_PRICE_ID` (see `functions/.env.example`), with `APP_BASE_URL` set to your site.
+   - Create the product "WeddingVista vendor plan" with a monthly S$99 price, and put its `price_...` in `functions/.env` as `STRIPE_PRICE_ID` (see `functions/.env.example`), with `APP_BASE_URL` set to your site.
    - In Stripe, turn on the Customer Portal, allowing card updates, invoices and cancellation.
 3. **Secrets for Functions:**
    - `npx firebase functions:secrets:set STRIPE_SECRET_KEY` (your `sk_test_...` key first, then `sk_live_...`).

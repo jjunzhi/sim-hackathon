@@ -19,7 +19,7 @@ import { formatBps, formatSGD } from "@/lib/money";
 import { useVendor } from "@/lib/vendors/vendor-context";
 
 // Configurable wording (not a legal claim): see .env.example.
-const PRICE_CENTS = Number(process.env.NEXT_PUBLIC_PLAN_PRICE_CENTS ?? "3500") || 3500;
+const PRICE_CENTS = Number(process.env.NEXT_PUBLIC_PLAN_PRICE_CENTS ?? "9900") || 9900;
 const PRICE_NOTE = process.env.NEXT_PUBLIC_PLAN_PRICE_NOTE ?? "No GST is charged on the plan.";
 const sgDay = (ms: number) => formatDate("en-SG", ms, { day: "numeric", month: "long", year: "numeric" });
 const monthLabel = (ym: string) => formatDate("en-SG", new Date(`${ym}-15T12:00:00+08:00`).getTime(), { month: "long", year: "numeric" });
