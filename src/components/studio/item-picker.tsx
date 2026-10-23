@@ -4,6 +4,7 @@ import { ImageOff } from "lucide-react";
 import { useState } from "react";
 import { StorageImage } from "@/components/photos/storage-image";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/cn";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n/provider";
@@ -71,7 +72,7 @@ export function ItemPicker({
               <span className="font-display text-h3">{cat.profile.businessName}</span>
               <span className="text-small text-muted">{isVenue ? t("studio.venueOwnDecor") : t("studio.decoratorAtVenue")}</span>
             </legend>
-            <ul className="grid gap-3 md:grid-cols-2">
+            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {cat.items.map((i) => {
                 const key = selectionKey("item", cat.uid, i.id);
                 const pkg = lockedBy(i.id);
@@ -79,17 +80,16 @@ export function ItemPicker({
                 if (!on && !matchesDiet(i, diet)) return null;
                 const tags = i.dietaryTags ?? [];
                 return (
-                  <li key={i.id} className="flex gap-3 rounded-xl border border-line bg-surface p-3">
-                    <div className="w-20 shrink-0">
-                      {i.photo ? (
-                        <StorageImage photo={i.photo} alt="" aspect="4 / 3" className="rounded-lg" sizes="80px" />
-                      ) : (
-                        <div className="flex items-center justify-center rounded-lg bg-subtle text-muted" style={{ aspectRatio: "4 / 3" }}>
-                          <ImageOff aria-hidden className="size-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-1 flex-col">
+                  // The photo leads the card, large enough to show what guests will see.
+                  <li key={i.id} className={cn("flex flex-col overflow-hidden rounded-xl border bg-surface", on ? "border-accent ring-2 ring-accent" : "border-line")}>
+                    {i.photo ? (
+                      <StorageImage photo={i.photo} alt="" aspect="3 / 2" sizes="(min-width: 48rem) 50vw, 100vw" />
+                    ) : (
+                      <div className="flex items-center justify-center bg-subtle text-muted" style={{ aspectRatio: "3 / 2" }}>
+                        <ImageOff aria-hidden className="size-6" />
+                      </div>
+                    )}
+                    <div className="flex flex-1 flex-col p-3">
                       <Checkbox
                         label={i.name}
                         description={

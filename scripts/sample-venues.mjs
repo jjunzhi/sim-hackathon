@@ -74,17 +74,33 @@ async function vendorDoc(uid, business, description, kinds, tax) {
   });
 }
 
+/**
+ * An item's picture: an approved stock photo from photos/items (named
+ * <owner>--<item>.jpg when two listings share an item id, else <item>.jpg;
+ * see CREDITS.md), otherwise a drawn picture of how a menu is served, or the
+ * decor's colour swatch. Re-encoding strips any metadata.
+ */
+async function itemImage(uid, it) {
+  for (const name of [`${uid}--${it.id}.jpg`, `${it.id}.jpg`]) {
+    const file = photosDir && join(photosDir, "items", name);
+    if (file && existsSync(file)) {
+      return { bytes: await sharp(readFileSync(file)).resize(1200, 900, { fit: "cover" }).webp({ quality: 82 }).toBuffer(), width: 1200, height: 900 };
+    }
+  }
+  const style = FOOD_STYLE[it.id];
+  const veg = it.dietaryTags.includes("vegetarian") || it.dietaryTags.includes("vegan");
+  const svg = style ? foodSvg(style, { veg, accent: it.hex }) : swatchSvg(it.hex, it.name);
+  return { bytes: await sharp(Buffer.from(svg)).webp({ quality: 85 }).toBuffer(), width: 800, height: 600 };
+}
+
 async function items(uid, list) {
   for (const it of list) {
     const path = `vendors/${uid}/items/${it.id}/p1.webp`;
-    // Menus get a drawn picture of how they're served; decor keeps its colour swatch.
-    const style = FOOD_STYLE[it.id];
-    const veg = it.dietaryTags.includes("vegetarian") || it.dietaryTags.includes("vegan");
-    const svg = style ? foodSvg(style, { veg, accent: it.hex }) : swatchSvg(it.hex, it.name);
-    await put(path, await sharp(Buffer.from(svg)).webp({ quality: 85 }).toBuffer(), "image/webp");
+    const img = await itemImage(uid, it);
+    await put(path, img.bytes, "image/webp");
     await db.doc(`vendors/${uid}/items/${it.id}`).set({
       name: it.name, category: it.category, unit: it.unit, priceCents: it.priceCents, description: "",
-      photo: photo(path, 800, 600, "image/webp"), active: true, dietaryTags: it.dietaryTags, createdAt: now, updatedAt: now,
+      photo: photo(path, img.width, img.height, "image/webp"), active: true, dietaryTags: it.dietaryTags, createdAt: now, updatedAt: now,
     });
   }
 }

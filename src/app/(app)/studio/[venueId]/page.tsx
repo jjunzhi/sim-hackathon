@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Bookmark, CalendarPlus, Check, Printer, Share2, Sparkles, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Bookmark, CalendarPlus, Check, Printer, ScrollText, Share2, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAria } from "@/components/aria/aria-context";
@@ -736,10 +736,24 @@ function Studio() {
               </Card>
             )}
 
-            {stepIndex === 4 && saved && canSave && catalogs && (
+            {stepIndex === 4 && (
               <Card>
                 <CardBody>
-                  <ItineraryPanel plan={plan} venue={venue} space={space} catalogs={catalogs} onChange={update} />
+                  {saved && canSave && catalogs ? (
+                    <ItineraryPanel plan={plan} venue={venue} space={space} catalogs={catalogs} onChange={update} />
+                  ) : (
+                    // Unsaved: say where the itinerary is and how to get it. Secondary button: the family links card below has the primary one.
+                    <section aria-labelledby="itinerary-save-h" className="flex flex-col items-start gap-3">
+                      <h3 id="itinerary-save-h" className="flex items-center gap-2 text-h3">
+                        <ScrollText aria-hidden className="size-5 text-gold" />
+                        {t("itinerary.title")}
+                      </h3>
+                      <p className="max-w-2xl text-muted">{t("itinerary.saveFirst")}</p>
+                      <Button onClick={savePlan} icon={<Bookmark aria-hidden className="size-4" />}>
+                        {auth.status === "signed-out" ? t("studio.saveYourPlan") : t("studio.savePlan")}
+                      </Button>
+                    </section>
+                  )}
                 </CardBody>
               </Card>
             )}

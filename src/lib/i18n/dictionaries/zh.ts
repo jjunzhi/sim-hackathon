@@ -913,6 +913,7 @@ const file: LocaleFile = {
     "floor.download": "下载平面图",
     // ---- guest itinerary (Share step) ----
     "itinerary.title": "宾客流程表",
+    "itinerary.saveFirst": "保存方案后即可制作宾客流程表：Aria 为宾客起草当天流程，您确认后即可生成精美的流程表，供下载或打印。",
     "itinerary.intro": "Aria 会为宾客起草婚礼当天的流程。您可以随意修改，确认后即可生成一张精美的流程表，方便分享。",
     "itinerary.create": "生成我们的流程表",
     "itinerary.prompt": "请为我们的宾客起草婚礼当天的流程：从抵达到送别，清晰友好，用面向宾客的措辞。",
