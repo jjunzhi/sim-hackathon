@@ -196,7 +196,7 @@ export async function handleRenderRequest(uid: string, req: RenderRequest, deps:
     await renderRef.delete().catch(() => undefined);
     if (err instanceof RenderFailure) {
       logger.warn("render failed", { key, reason: err.reason });
-      throw new HttpsError(err.reason === "unavailable" ? "unavailable" : "failed-precondition", err.message, { reason: err.reason });
+      throw new HttpsError(err.reason === "unavailable" || err.reason === "quota" ? "unavailable" : "failed-precondition", err.message, { reason: err.reason });
     }
     logger.error("render crashed", { key, err: String(err) });
     throw new HttpsError("internal", failure("no_image").message);

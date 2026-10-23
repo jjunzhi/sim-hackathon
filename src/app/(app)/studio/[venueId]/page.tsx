@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { useAria } from "@/components/aria/aria-context";
 import { AppHeader } from "@/components/app-header";
 import { StorageImage } from "@/components/photos/storage-image";
+import { FloorPlan } from "@/components/render/floor-plan";
 import { RenderPanel } from "@/components/render/render-panel";
 import { FamilyLinks } from "@/components/sharing/family-links";
 import { CapacityStatus } from "@/components/studio/capacity-status";
@@ -313,6 +314,22 @@ function Studio() {
       if (!sel || !cat) continue;
       const ids = sel.kind === "item" ? [sel.id] : (cat.packages.find((p) => p.id === sel.id)?.itemIds ?? []);
       for (const id of ids) if (cat.items.find((i) => i.id === id)?.photo && !out.some((o) => o.vendorUid === cat.uid && o.itemId === id)) out.push({ vendorUid: cat.uid, itemId: id });
+    }
+    return out;
+  }, [plan, catalogs]);
+  // Chosen items by name and category, with the items inside chosen packages, for the floor plan.
+  const chosenItems = useMemo(() => {
+    if (!plan || !catalogs) return [];
+    const out: Array<{ name: string; category: string }> = [];
+    for (const key of Object.keys(plan.selections)) {
+      const sel = parseSelectionKey(key);
+      const cat = sel && catalogs.find((c) => c.uid === sel.vendorUid);
+      if (!sel || !cat) continue;
+      const ids = sel.kind === "item" ? [sel.id] : (cat.packages.find((p) => p.id === sel.id)?.itemIds ?? []);
+      for (const id of ids) {
+        const item = cat.items.find((i) => i.id === id);
+        if (item) out.push({ name: item.name, category: item.category });
+      }
     }
     return out;
   }, [plan, catalogs]);
@@ -625,6 +642,9 @@ function Studio() {
                       }
                       onRendered={setLastRender}
                     />
+                  )}
+                  {space && (
+                    <FloorPlan roomName={space.name} headcount={plan.headcount} seatsPerTable={space.seatsPerTable ?? 10} items={chosenItems} fileName={plan.name} />
                   )}
                   {plan.savedRenders.length > 0 && space?.photo && (
                     <section aria-labelledby="saved-renders" className="flex flex-col gap-3">

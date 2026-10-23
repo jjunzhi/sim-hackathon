@@ -896,6 +896,21 @@ const file: LocaleFile = {
     "aria.notStarted": "தொடங்கப்படவில்லை.",
     "aria.guestNote": "நீங்கள் விருந்தினராக உரையாடுகிறீர்கள்.",
     "aria.guestLink": "உங்கள் திட்டங்களைச் சேமிக்க இலவசக் கணக்கை உருவாக்குங்கள்",
+    // ---- floor plan (render step) ----
+    "floor.title": "தரைத் திட்டம்",
+    "floor.summary_one": "{guests} விருந்தினர்களுக்கு {seats} இருக்கைகள் கொண்ட {count} மேசை",
+    "floor.summary_other": "{guests} விருந்தினர்களுக்கு {seats} இருக்கைகள் கொண்ட {count} மேசைகள்",
+    "floor.stage": "மேடை",
+    "floor.danceFloor": "நடனத் தளம்",
+    "floor.buffet": "பஃபே",
+    "floor.dessert": "இனிப்பு",
+    "floor.solemnisation": "திருமணப் பதிவு",
+    "floor.entrance": "நுழைவாயில்",
+    "floor.entranceArch": "வளைவுடன் நுழைவாயில்",
+    "floor.note": "பரிந்துரைக்கப்பட்ட அமைப்பு, அளவுக்கு ஏற்ப இல்லை. மேசைகள் மேடையிலிருந்து எண்ணிடப்பட்டுள்ளன. அமைப்பை இடத்துடன் உறுதிப்படுத்துங்கள்.",
+    "floor.notDrawn_one": "இன்னும் {count} மேசை இந்த வரைபடத்தில் பொருந்தவில்லை; இடம் அதை அமைக்கும்.",
+    "floor.notDrawn_other": "இன்னும் {count} மேசைகள் இந்த வரைபடத்தில் பொருந்தவில்லை; இடம் அவற்றை அமைக்கும்.",
+    "floor.download": "தரைத் திட்டத்தைப் பதிவிறக்கு",
   },
 };
 export default file;

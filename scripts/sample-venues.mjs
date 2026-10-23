@@ -15,6 +15,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DECORATORS, VENUES } from "./sample-venues/data.mjs";
+import { FOOD_STYLE, foodSvg } from "./sample-venues/food.mjs";
 import { SCENES, swatchSvg } from "./sample-venues/scenes.mjs";
 
 const args = process.argv.slice(2);
@@ -76,7 +77,11 @@ async function vendorDoc(uid, business, description, kinds, tax) {
 async function items(uid, list) {
   for (const it of list) {
     const path = `vendors/${uid}/items/${it.id}/p1.webp`;
-    await put(path, await sharp(Buffer.from(swatchSvg(it.hex, it.name))).webp({ quality: 85 }).toBuffer(), "image/webp");
+    // Menus get a drawn picture of how they're served; decor keeps its colour swatch.
+    const style = FOOD_STYLE[it.id];
+    const veg = it.dietaryTags.includes("vegetarian") || it.dietaryTags.includes("vegan");
+    const svg = style ? foodSvg(style, { veg, accent: it.hex }) : swatchSvg(it.hex, it.name);
+    await put(path, await sharp(Buffer.from(svg)).webp({ quality: 85 }).toBuffer(), "image/webp");
     await db.doc(`vendors/${uid}/items/${it.id}`).set({
       name: it.name, category: it.category, unit: it.unit, priceCents: it.priceCents, description: "",
       photo: photo(path, 800, 600, "image/webp"), active: true, dietaryTags: it.dietaryTags, createdAt: now, updatedAt: now,

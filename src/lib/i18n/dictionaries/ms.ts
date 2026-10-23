@@ -896,6 +896,21 @@ const file: LocaleFile = {
     "aria.notStarted": "Tidak dimulakan.",
     "aria.guestNote": "Anda bersembang sebagai tetamu.",
     "aria.guestLink": "Cipta akaun percuma untuk menyimpan pelan anda",
+    // ---- floor plan (render step) ----
+    "floor.title": "Pelan lantai",
+    "floor.summary_one": "{count} meja untuk {seats} orang, {guests} tetamu",
+    "floor.summary_other": "{count} meja untuk {seats} orang setiap satu, {guests} tetamu",
+    "floor.stage": "Pentas",
+    "floor.danceFloor": "Ruang tari",
+    "floor.buffet": "Bufet",
+    "floor.dessert": "Pencuci mulut",
+    "floor.solemnisation": "Akad nikah",
+    "floor.entrance": "Pintu masuk",
+    "floor.entranceArch": "Pintu masuk dengan gerbang",
+    "floor.note": "Susun atur cadangan, bukan mengikut skala. Meja dinomborkan dari pentas. Sahkan susun atur dengan pihak tempat.",
+    "floor.notDrawn_one": "{count} lagi meja tidak muat dalam lukisan ini; pihak tempat akan menempatkannya.",
+    "floor.notDrawn_other": "{count} lagi meja tidak muat dalam lukisan ini; pihak tempat akan menempatkannya.",
+    "floor.download": "Muat turun pelan lantai",
   },
 };
 export default file;
