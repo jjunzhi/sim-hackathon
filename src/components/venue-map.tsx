@@ -32,7 +32,7 @@ export function VenueMap({ name, address, postalCode }: { name: string; address:
           </span>
         </p>
       )}
-      {key ? (
+      {key && (
         <iframe
           title={t("map.title", { name })}
           src={`https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(key)}&q=${q}&region=SG`}
@@ -41,8 +41,6 @@ export function VenueMap({ name, address, postalCode }: { name: string; address:
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
         />
-      ) : (
-        <p className="rounded-xl border border-dashed border-line bg-subtle p-4 text-small text-muted">{t("map.unavailable")}</p>
       )}
       <div className="flex flex-wrap gap-2">
         <a href={openUrl} target="_blank" rel="noopener noreferrer" className={linkClass}>

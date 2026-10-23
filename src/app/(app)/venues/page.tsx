@@ -91,8 +91,9 @@ export default function CatalogPage() {
             )}
             {shown.length > 0 && (
               <motion.ul variants={revealContainer} initial="hidden" animate="visible" className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {shown.map((v) => (
-                  <VenueCard key={v.id} venue={v} />
+                {/* The first row is in view on load; don't make it wait on lazy loading. */}
+                {shown.map((v, i) => (
+                  <VenueCard key={v.id} venue={v} eager={i < 3} />
                 ))}
               </motion.ul>
             )}

@@ -12,7 +12,7 @@ allows selling unaltered copies or redistributing them as stock.
 
 | File | Photo | Photographer | Source | Check notes |
 |---|---|---|---|---|
-| garden-pavilion--glasshouse.jpg | Dining room with greenery | Takudzwa Munyoro | [Pexels](https://www.pexels.com/photo/elegant-dining-room-with-natural-light-and-greenery-32172793/) | No people; small framed certificates, unreadable |
+| garden-pavilion--glasshouse.jpg | Glass hall with chandeliers and a flower-lined aisle | David Kristianto | [Unsplash](https://unsplash.com/photos/a-wedding-setup-with-white-flowers-and-chandeliers-i4XQ0NBCWzU) | Replaced the earlier dining-room photo on 2026-10-23, approved by the product owner. No people; programme cards on the chairs, unreadable |
 | kampong-garden--lawn.jpg | White chairs on a lawn | Rodrigo Rodrigues | [Unsplash](https://unsplash.com/photos/kwhzqITyqes) | No people or logos |
 | grand-orchard--grand-ballroom.jpg | Hotel banquet hall with chandeliers | Kevin Early | [Pexels](https://www.pexels.com/photo/elegant-hotel-banquet-hall-with-chandeliers-37240724/) | No people; framed landscape paintings |
 | heritage-shophouse--courtyard.jpg | Historic room with green table | Pix Tresa | [Unsplash](https://unsplash.com/photos/9TZq8xQ536E) | No people or logos |

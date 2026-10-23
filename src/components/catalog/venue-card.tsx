@@ -12,7 +12,7 @@ import type { CatalogVenue } from "@/lib/venues/catalog";
 import { DIET_KEYS, type DietTag } from "@/lib/venues/inclusion";
 import { tagLabel } from "@/lib/venues/tag-labels";
 
-export function VenueCard({ venue }: { venue: CatalogVenue }) {
+export function VenueCard({ venue, eager = false }: { venue: CatalogVenue; eager?: boolean }) {
   const t = useT();
   const s = venue.capacitySummary;
   return (
@@ -20,7 +20,7 @@ export function VenueCard({ venue }: { venue: CatalogVenue }) {
       <Link href={`/venues/${venue.id}`} className="block h-full rounded-card" aria-label={s ? t("catalog.cardLabel", { name: venue.name, min: s.min, max: s.max }) : venue.name}>
         <Card interactive className="flex h-full flex-col">
           {venue.coverPhoto ? (
-            <StorageImage photo={venue.coverPhoto} alt="" aspect="3 / 2" className="rounded-none" sizes="(min-width: 64rem) 380px, (min-width: 40rem) 50vw, 100vw" />
+            <StorageImage photo={venue.coverPhoto} alt="" aspect="3 / 2" className="rounded-none" sizes="(min-width: 64rem) 380px, (min-width: 40rem) 50vw, 100vw" eager={eager} />
           ) : (
             <div className="flex items-center justify-center bg-subtle text-muted" style={{ aspectRatio: "3 / 2" }}>
               <Building2 aria-hidden className="size-8" />

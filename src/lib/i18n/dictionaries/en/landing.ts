@@ -22,7 +22,7 @@ export const landing = {
   "landing.hero.ballroom": "Grand ballroom",
   "landing.hero.lawn": "Garden lawn",
   "landing.hero.rooftop": "Rooftop terrace",
-  "landing.hero.glasshouseAlt": "A bright dining room with tall windows and greenery, tables set for a meal",
+  "landing.hero.glasshouseAlt": "A tall glass hall with crystal chandeliers and white draping, chairs set either side of a flower-lined aisle",
   "landing.hero.ballroomAlt": "A hotel banquet hall with chandeliers and long dining tables",
   "landing.hero.lawnAlt": "Rows of white chairs on a green lawn, set up for an outdoor ceremony",
   "landing.hero.rooftopAlt": "A rooftop terrace with seating at sunset",

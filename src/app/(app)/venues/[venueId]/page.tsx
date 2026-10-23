@@ -68,7 +68,7 @@ export default function VenuePage() {
         {venue && (
           <>
             <div className="grid items-start gap-8 lg:grid-cols-[1.3fr_1fr]">
-              {venue.coverPhoto && <StorageImage photo={venue.coverPhoto} alt={t("catalog.coverAlt", { name: venue.name })} aspect="3 / 2" sizes="(min-width: 64rem) 680px, 100vw" />}
+              {venue.coverPhoto && <StorageImage photo={venue.coverPhoto} alt={t("catalog.coverAlt", { name: venue.name })} aspect="3 / 2" sizes="(min-width: 64rem) 680px, 100vw" eager />}
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-h1">{venue.name}</h1>

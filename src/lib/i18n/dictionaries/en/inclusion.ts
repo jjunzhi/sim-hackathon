@@ -15,7 +15,6 @@ export const inclusion = {
   "map.title": "Map of {name}",
   "map.open": "Open in Google Maps",
   "map.directions": "Directions",
-  "map.unavailable": "The map preview isn't set up here. Use the links to see the venue in Google Maps.",
 
   // Wedding date and calendar
   "date.label": "Wedding date (optional)",

@@ -143,14 +143,14 @@ await u.clickButton("Clear");
 await sleep(300);
 await shot("catalog-en");
 
-// 3. Venue page: access, menus, MUIS link, map fallback, booked dates.
+// 3. Venue page: access, menus, MUIS link, map links, booked dates.
 await u.goto(`${base}/venues/sample-garden-pavilion`);
 await u.waitForText("Rooms", 15_000);
 await sleep(1500);
 check("venue: accessible toilet listed", await has("Accessible toilet"), true);
 check("venue: menus listed", (await has("Halal")) && (await has("Vegetarian")) && (await has("No beef")), true);
 check("venue: MUIS link", await cdp.evaluate("!!document.querySelector('a[href=\"https://halal.muis.gov.sg/halal/establishments\"]')"), true);
-check("venue: map fallback without a key", await has("The map preview isn't set up here."), true);
+check("venue: no map placeholder without a key", await has("The map preview isn't set up here."), false);
 check("venue: Google Maps link", await cdp.evaluate("[...document.querySelectorAll('a')].some(a => a.href.startsWith('https://www.google.com/maps/search/?api=1&query=') && a.target === '_blank')"), true);
 check("venue: booked dates listed", (await has("15 May 2027")) && (await has("12 Jun 2027")), true);
 check("venue: vendor-statement wording", await has("As stated by the vendor."), true);
