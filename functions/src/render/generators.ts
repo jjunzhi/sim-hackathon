@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { logger } from "firebase-functions";
 import sharp, { type Metadata, type Sharp } from "sharp";
 import { IMAGE_SIZE, MODEL_NAME } from "./prompt.js";
 
@@ -15,7 +16,7 @@ export interface ImageInput {
 /** A render that could not be produced. `reason` is for logs; `message` is safe to show people. */
 export class RenderFailure extends Error {
   constructor(
-    public readonly reason: "blocked" | "no_image" | "unavailable" | "bad_input",
+    public readonly reason: "blocked" | "no_image" | "unavailable" | "bad_input" | "quota",
     message: string,
   ) {
     super(message);
@@ -27,6 +28,7 @@ const FRIENDLY = {
   blocked: "We couldn't create this render. Try a different theme or a different set of items.",
   no_image: "We couldn't create this render this time. Please try again.",
   unavailable: "The render service is busy right now. Please try again in a minute.",
+  quota: "The image AI has reached its limit for now. Please try again later.",
   bad_input: "We couldn't use this room photo. Ask the venue to upload it again.",
 } as const;
 
@@ -78,10 +80,11 @@ export async function generateWithGemini(args: {
     })) as InteractionLike;
   } catch (err) {
     const status = (err as { status?: number }).status ?? 0;
-    if (status === 400) {
-      const text = String((err as Error).message ?? "").toLowerCase();
-      throw failure(/safety|prohibited|policy/.test(text) ? "blocked" : "bad_input");
-    }
+    const text = String((err as Error).message ?? "");
+    // The upstream status and a short reason, for diagnosis. Never the key or the images.
+    logger.warn("gemini image call failed", { status, model: MODEL_NAME, detail: text.slice(0, 300) });
+    if (status === 400) throw failure(/safety|prohibited|policy/i.test(text) ? "blocked" : "bad_input");
+    if (status === 429) throw failure("quota");
     throw failure("unavailable");
   }
   return extractImage(interaction);

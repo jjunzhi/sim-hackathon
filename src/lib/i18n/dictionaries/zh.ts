@@ -896,6 +896,21 @@ const file: LocaleFile = {
     "aria.notStarted": "未开始。",
     "aria.guestNote": "您正以访客身份聊天。",
     "aria.guestLink": "创建免费账户以保存方案",
+    // ---- floor plan (render step) ----
+    "floor.title": "平面图",
+    "floor.summary_one": "{count} 桌，每桌 {seats} 位，共 {guests} 位宾客",
+    "floor.summary_other": "{count} 桌，每桌 {seats} 位，共 {guests} 位宾客",
+    "floor.stage": "舞台",
+    "floor.danceFloor": "舞池",
+    "floor.buffet": "自助餐",
+    "floor.dessert": "甜点",
+    "floor.solemnisation": "证婚",
+    "floor.entrance": "入口",
+    "floor.entranceArch": "入口拱门",
+    "floor.note": "建议布局，并非按比例绘制。餐桌从舞台起编号。请与场地确认布局。",
+    "floor.notDrawn_one": "还有 {count} 桌未能画入图中，将由场地安排。",
+    "floor.notDrawn_other": "还有 {count} 桌未能画入图中，将由场地安排。",
+    "floor.download": "下载平面图",
   },
 };
 export default file;
