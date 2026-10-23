@@ -1,6 +1,8 @@
-// SAMPLE listings for demonstration. None of these venues, vendors or prices
-// are real; every name says SAMPLE. Addresses name only an area, so map links
-// point at a neighbourhood, never at a real business.
+// Demonstration listings. None of these venues, vendors or prices are real
+// businesses. At the product owner's request (2026-10-23) they carry no
+// "SAMPLE" wording on the site; config/sampleListings records them so
+// `npm run sample-venues -- remove` deletes them all. Addresses name only an
+// area, so map links point at a neighbourhood, never at a real business.
 
 const tax = (serviceChargeBps, gstBps) => ({ serviceChargeBps, gstBps, noServiceChargeNote: "No service charge", noGstNote: "Prices not subject to GST" });
 const tiers = {
@@ -8,26 +10,26 @@ const tiers = {
   peak: (peakRental, peakMin, offRental, offMin = null) => ({ peak: { roomRentalCents: peakRental, minimumSpendCents: peakMin }, offPeak: { roomRentalCents: offRental, minimumSpendCents: offMin } }),
 };
 // [id, name, category, unit, priceCents, swatch colour, dietaryTags?]
-const decor = (id, name, category, unit, priceCents, hex, dietaryTags = []) => ({ id, name: `SAMPLE ${name}`, category, unit, priceCents, hex, dietaryTags });
+const decor = (id, name, category, unit, priceCents, hex, dietaryTags = []) => ({ id, name, category, unit, priceCents, hex, dietaryTags });
 
 export const VENUES = [
   {
     owner: "sample-v-garden",
-    business: "SAMPLE Garden Pavilion Co",
+    business: "Garden Pavilion Co",
     tax: tax(1000, 900),
     venue: {
-      id: "sample-garden-pavilion",
-      name: "SAMPLE Garden Pavilion",
-      address: "SAMPLE address, Botanic Gardens area, Singapore",
-      description: "SAMPLE listing for demonstration. A glasshouse ballroom opening onto a garden terrace, with in-house florals and halal and vegetarian banquet menus.",
+      id: "garden-pavilion",
+      name: "Garden Pavilion",
+      address: "Botanic Gardens area, Singapore",
+      description: "A glasshouse ballroom opening onto a garden terrace, with in-house florals and halal and vegetarian banquet menus.",
       styleTags: ["Garden", "Ballroom"],
       cultureTags: ["Chinese", "Malay", "Fusion", "Halal-friendly"],
       wheelchairAccess: true, liftAccess: true, stepFreeEntrance: true, accessibleToilet: true, accessibleParking: true,
       menuOptions: ["halal", "vegetarian", "no-beef", "no-pork"],
     },
     spaces: [
-      { id: "glasshouse", name: "SAMPLE Glasshouse Ballroom", scene: "glasshouse", capacityMin: 80, capacityMax: 250, tiers: tiers.peak(1_200_000, 4_500_000, 650_000) },
-      { id: "terrace", name: "SAMPLE Orchid Terrace", scene: "garden", capacityMin: 30, capacityMax: 80, tiers: tiers.standard(300_000) },
+      { id: "glasshouse", name: "Glasshouse Ballroom", scene: "glasshouse", capacityMin: 80, capacityMax: 250, tiers: tiers.peak(1_200_000, 4_500_000, 650_000) },
+      { id: "terrace", name: "Orchid Terrace", scene: "garden", capacityMin: 30, capacityMax: 80, tiers: tiers.standard(300_000) },
     ],
     items: [
       decor("arch", "Floral arch", "Florals", "piece", 120_000, "#b84c60"),
@@ -40,21 +42,21 @@ export const VENUES = [
   },
   {
     owner: "sample-v-grand",
-    business: "SAMPLE Grand Orchard Hotel",
+    business: "Grand Orchard Hotel",
     tax: tax(1000, 900),
     venue: {
-      id: "sample-grand-orchard",
-      name: "SAMPLE Grand Orchard Hotel",
-      address: "SAMPLE address, Orchard area, Singapore",
-      description: "SAMPLE listing for demonstration. A pillarless grand ballroom for large banquets, plus a smaller function room. Chinese and international banquet menus.",
+      id: "grand-orchard",
+      name: "Grand Orchard Hotel",
+      address: "Orchard area, Singapore",
+      description: "A pillarless grand ballroom for large banquets, plus a smaller function room. Chinese and international banquet menus.",
       styleTags: ["Ballroom"],
       cultureTags: ["Chinese", "Indian", "Western", "Fusion"],
       wheelchairAccess: true, liftAccess: true, stepFreeEntrance: true, accessibleToilet: true, accessibleParking: true,
       menuOptions: ["vegetarian", "no-beef"],
     },
     spaces: [
-      { id: "grand-ballroom", name: "SAMPLE Grand Ballroom", scene: "ballroom", capacityMin: 250, capacityMax: 800, tiers: tiers.peak(2_500_000, 12_000_000, 1_500_000, 6_000_000) },
-      { id: "jade-room", name: "SAMPLE Jade Function Room", scene: "ballroom", capacityMin: 60, capacityMax: 180, tiers: tiers.peak(800_000, 2_500_000, 500_000) },
+      { id: "grand-ballroom", name: "Grand Ballroom", scene: "ballroom", capacityMin: 250, capacityMax: 800, tiers: tiers.peak(2_500_000, 12_000_000, 1_500_000, 6_000_000) },
+      { id: "jade-room", name: "Jade Function Room", scene: "ballroom", capacityMin: 60, capacityMax: 180, tiers: tiers.peak(800_000, 2_500_000, 500_000) },
     ],
     items: [
       decor("chinese-banquet", "Chinese banquet menu (9 courses)", "Food and drink", "guest", 18_800, "#c0392b", ["no-beef"]),
@@ -67,19 +69,19 @@ export const VENUES = [
   },
   {
     owner: "sample-v-heritage",
-    business: "SAMPLE Heritage Shophouse Pte",
+    business: "Heritage Shophouse Pte",
     tax: tax(0, 900),
     venue: {
-      id: "sample-heritage-shophouse",
-      name: "SAMPLE Heritage Shophouse",
-      address: "SAMPLE address, Joo Chiat area, Singapore",
-      description: "SAMPLE listing for demonstration. An intimate courtyard in a restored shophouse, suited to Peranakan and small Chinese tea ceremonies.",
+      id: "heritage-shophouse",
+      name: "Heritage Shophouse",
+      address: "Joo Chiat area, Singapore",
+      description: "An intimate courtyard in a restored shophouse, suited to Peranakan and small Chinese tea ceremonies.",
       styleTags: ["Heritage", "Intimate"],
       cultureTags: ["Peranakan", "Chinese"],
       wheelchairAccess: false, liftAccess: false, stepFreeEntrance: false, accessibleToilet: false, accessibleParking: false,
       menuOptions: ["no-beef"],
     },
-    spaces: [{ id: "courtyard", name: "SAMPLE Tiled Courtyard", scene: "courtyard", capacityMin: 30, capacityMax: 90, tiers: tiers.standard(450_000, 800_000) }],
+    spaces: [{ id: "courtyard", name: "Tiled Courtyard", scene: "courtyard", capacityMin: 30, capacityMax: 90, tiers: tiers.standard(450_000, 800_000) }],
     items: [
       decor("nyonya-menu", "Nyonya set menu", "Food and drink", "guest", 9_800, "#e0a458", ["no-beef"]),
       decor("tea-set", "Tea ceremony set", "Table decor", "piece", 18_000, "#c0392b"),
@@ -89,21 +91,21 @@ export const VENUES = [
   },
   {
     owner: "sample-v-rooftop",
-    business: "SAMPLE Rooftop Loft LLP",
+    business: "Rooftop Loft LLP",
     tax: tax(1000, 900),
     venue: {
-      id: "sample-rooftop-loft",
-      name: "SAMPLE Rooftop Loft",
-      address: "SAMPLE address, Tanjong Pagar area, Singapore",
-      description: "SAMPLE listing for demonstration. A rooftop with city views at dusk and an indoor loft for rainy days.",
+      id: "rooftop-loft",
+      name: "Rooftop Loft",
+      address: "Tanjong Pagar area, Singapore",
+      description: "A rooftop with city views at dusk and an indoor loft for rainy days.",
       styleTags: ["Rooftop", "Industrial"],
       cultureTags: ["Western", "Indian", "Fusion"],
       wheelchairAccess: true, liftAccess: true, stepFreeEntrance: true, accessibleToilet: true, accessibleParking: false,
       menuOptions: ["vegetarian", "vegan"],
     },
     spaces: [
-      { id: "skyline", name: "SAMPLE Skyline Rooftop", scene: "rooftop", capacityMin: 60, capacityMax: 160, tiers: tiers.peak(900_000, null, 550_000) },
-      { id: "loft", name: "SAMPLE Brick Loft", scene: "warehouse", capacityMin: 40, capacityMax: 120, tiers: tiers.standard(400_000) },
+      { id: "skyline", name: "Skyline Rooftop", scene: "rooftop", capacityMin: 60, capacityMax: 160, tiers: tiers.peak(900_000, null, 550_000) },
+      { id: "loft", name: "Brick Loft", scene: "warehouse", capacityMin: 40, capacityMax: 120, tiers: tiers.standard(400_000) },
     ],
     items: [
       decor("canapes", "Canapé and grazing menu", "Food and drink", "guest", 9_500, "#b5835a"),
@@ -114,19 +116,19 @@ export const VENUES = [
   },
   {
     owner: "sample-v-seaside",
-    business: "SAMPLE Seaside Deck Pte",
+    business: "Seaside Deck Pte",
     tax: tax(1000, 900),
     venue: {
-      id: "sample-seaside-deck",
-      name: "SAMPLE Seaside Deck",
-      address: "SAMPLE address, Sentosa area, Singapore",
-      description: "SAMPLE listing for demonstration. A timber deck by the water for sunset ceremonies and relaxed receptions.",
+      id: "seaside-deck",
+      name: "Seaside Deck",
+      address: "Sentosa area, Singapore",
+      description: "A timber deck by the water for sunset ceremonies and relaxed receptions.",
       styleTags: ["Beach", "Waterfront"],
       cultureTags: ["Western", "Fusion", "Halal-friendly"],
       wheelchairAccess: true, liftAccess: false, stepFreeEntrance: true, accessibleToilet: true, accessibleParking: true,
       menuOptions: ["halal", "vegetarian"],
     },
-    spaces: [{ id: "deck", name: "SAMPLE Sunset Deck", scene: "deck", capacityMin: 40, capacityMax: 180, tiers: tiers.peak(1_000_000, 3_000_000, 600_000) }],
+    spaces: [{ id: "deck", name: "Sunset Deck", scene: "deck", capacityMin: 40, capacityMax: 180, tiers: tiers.peak(1_000_000, 3_000_000, 600_000) }],
     items: [
       decor("bbq-halal", "Halal seafood barbecue", "Food and drink", "guest", 12_800, "#d97b4a", ["halal", "no-pork"]),
       decor("veg-bbq", "Vegetarian grill", "Food and drink", "guest", 9_800, "#7e9c7a", ["vegetarian", "no-beef", "no-pork"]),
@@ -136,19 +138,19 @@ export const VENUES = [
   },
   {
     owner: "sample-v-warehouse",
-    business: "SAMPLE Warehouse Collective",
+    business: "Warehouse Collective",
     tax: tax(0, 0),
     venue: {
-      id: "sample-warehouse",
-      name: "SAMPLE Warehouse Collective",
-      address: "SAMPLE address, Kallang area, Singapore",
-      description: "SAMPLE listing for demonstration. A converted warehouse with brick walls and factory windows. Bring your own caterer or choose from partners.",
+      id: "warehouse",
+      name: "Warehouse Collective",
+      address: "Kallang area, Singapore",
+      description: "A converted warehouse with brick walls and factory windows. Bring your own caterer or choose from partners.",
       styleTags: ["Industrial"],
       cultureTags: ["Western", "Fusion"],
       wheelchairAccess: true, liftAccess: false, stepFreeEntrance: true, accessibleToilet: true, accessibleParking: true,
       menuOptions: ["vegetarian", "vegan"],
     },
-    spaces: [{ id: "hall", name: "SAMPLE Main Warehouse", scene: "warehouse", capacityMin: 80, capacityMax: 300, tiers: tiers.standard(700_000) }],
+    spaces: [{ id: "hall", name: "Main Warehouse", scene: "warehouse", capacityMin: 80, capacityMax: 300, tiers: tiers.standard(700_000) }],
     items: [
       decor("long-tables", "Long feasting tables", "Furniture", "table", 6_000, "#8c6744"),
       decor("edison", "Edison bulb canopy", "Lighting", "piece", 120_000, "#ffd27a"),
@@ -158,19 +160,19 @@ export const VENUES = [
   },
   {
     owner: "sample-v-kampong",
-    business: "SAMPLE Kampong Garden House",
+    business: "Kampong Garden House",
     tax: tax(0, 900),
     venue: {
-      id: "sample-kampong-garden",
-      name: "SAMPLE Kampong Garden House",
-      address: "SAMPLE address, Changi area, Singapore",
-      description: "SAMPLE listing for demonstration. A garden house with a lawn for bersanding and open-air receptions; halal kitchen partners.",
+      id: "kampong-garden",
+      name: "Kampong Garden House",
+      address: "Changi area, Singapore",
+      description: "A garden house with a lawn for bersanding and open-air receptions; halal kitchen partners.",
       styleTags: ["Garden"],
       cultureTags: ["Malay", "Halal-friendly", "Fusion"],
       wheelchairAccess: true, liftAccess: false, stepFreeEntrance: true, accessibleToilet: false, accessibleParking: true,
       menuOptions: ["halal", "no-pork"],
     },
-    spaces: [{ id: "lawn", name: "SAMPLE Garden Lawn", scene: "garden", capacityMin: 50, capacityMax: 220, tiers: tiers.peak(500_000, null, 300_000) }],
+    spaces: [{ id: "lawn", name: "Garden Lawn", scene: "garden", capacityMin: 50, capacityMax: 220, tiers: tiers.peak(500_000, null, 300_000) }],
     items: [
       decor("nasi-minyak", "Nasi minyak buffet", "Food and drink", "guest", 6_800, "#e2b04a", ["halal", "no-pork"]),
       decor("dessert-table", "Kuih dessert table", "Food and drink", "guest", 1_800, "#c98fb0", ["halal", "no-pork", "vegetarian"]),
@@ -180,19 +182,19 @@ export const VENUES = [
   },
   {
     owner: "sample-v-community",
-    business: "SAMPLE Community Function Hall",
+    business: "Community Function Hall",
     tax: tax(0, 0),
     venue: {
-      id: "sample-community-hall",
-      name: "SAMPLE Community Function Hall",
-      address: "SAMPLE address, Toa Payoh area, Singapore",
-      description: "SAMPLE listing for demonstration. A large, budget-friendly multipurpose hall with a stage, popular for Indian and Malay weddings.",
+      id: "community-hall",
+      name: "Community Function Hall",
+      address: "Toa Payoh area, Singapore",
+      description: "A large, budget-friendly multipurpose hall with a stage, popular for Indian and Malay weddings.",
       styleTags: ["Ballroom"],
       cultureTags: ["Indian", "Malay", "Chinese"],
       wheelchairAccess: true, liftAccess: true, stepFreeEntrance: true, accessibleToilet: true, accessibleParking: true,
       menuOptions: ["halal", "vegetarian", "no-beef", "no-pork"],
     },
-    spaces: [{ id: "main-hall", name: "SAMPLE Main Hall", scene: "hall", capacityMin: 100, capacityMax: 450, tiers: tiers.peak(350_000, null, 220_000) }],
+    spaces: [{ id: "main-hall", name: "Main Hall", scene: "hall", capacityMin: 100, capacityMax: 450, tiers: tiers.peak(350_000, null, 220_000) }],
     items: [
       decor("veg-thali", "Vegetarian thali buffet", "Food and drink", "guest", 3_800, "#e8a33a", ["vegetarian", "no-beef", "no-pork"]),
       decor("halal-buffet", "Halal buffet", "Food and drink", "guest", 4_200, "#c98f4b", ["halal", "no-pork"]),
@@ -202,19 +204,19 @@ export const VENUES = [
   },
   {
     owner: "sample-v-dining",
-    business: "SAMPLE Chinatown Dining Room",
+    business: "Chinatown Dining Room",
     tax: tax(1000, 900),
     venue: {
-      id: "sample-chinatown-dining",
-      name: "SAMPLE Chinatown Dining Room",
-      address: "SAMPLE address, Chinatown area, Singapore",
-      description: "SAMPLE listing for demonstration. A private dining room for ROM solemnisations and small family dinners.",
+      id: "chinatown-dining",
+      name: "Chinatown Dining Room",
+      address: "Chinatown area, Singapore",
+      description: "A private dining room for ROM solemnisations and small family dinners.",
       styleTags: ["Intimate", "Heritage"],
       cultureTags: ["Chinese", "Western"],
       wheelchairAccess: false, liftAccess: true, stepFreeEntrance: false, accessibleToilet: true, accessibleParking: false,
       menuOptions: ["vegetarian"],
     },
-    spaces: [{ id: "private-room", name: "SAMPLE Private Dining Room", scene: "dining", capacityMin: 10, capacityMax: 40, tiers: tiers.standard(150_000, 400_000) }],
+    spaces: [{ id: "private-room", name: "Private Dining Room", scene: "dining", capacityMin: 10, capacityMax: 40, tiers: tiers.standard(150_000, 400_000) }],
     items: [
       decor("set-dinner", "Chef's set dinner", "Food and drink", "guest", 13_800, "#a8583f"),
       decor("veg-set", "Vegetarian set dinner", "Food and drink", "guest", 11_800, "#7e9c7a", ["vegetarian", "no-beef", "no-pork"]),
@@ -227,20 +229,20 @@ export const VENUES = [
 export const DECORATORS = [
   {
     owner: "sample-d-petal",
-    business: "SAMPLE Petal & Lantern Studio",
-    description: "SAMPLE decorator for demonstration. Florals and lighting for garden and ballroom weddings.",
+    business: "Petal & Lantern Studio",
+    description: "Florals and lighting for garden and ballroom weddings.",
     tax: tax(0, 0),
     items: [
       decor("lanterns", "Lantern set", "Lighting", "table", 4_500, "#b8935a"),
       decor("peony-backdrop", "Peony backdrop", "Backdrops and stage", "piece", 280_000, "#f4d3d9"),
       decor("fairy-canopy", "Fairy light canopy", "Lighting", "piece", 150_000, "#f5d58e"),
     ],
-    package: { id: "garden-romance", name: "SAMPLE Garden romance", unit: "table", priceCents: 12_000, itemIds: ["lanterns"] },
+    package: { id: "garden-romance", name: "Garden romance", unit: "table", priceCents: 12_000, itemIds: ["lanterns"] },
   },
   {
     owner: "sample-d-pelamin",
-    business: "SAMPLE Pelamin Artistry",
-    description: "SAMPLE decorator for demonstration. Pelamin daises and Malay wedding styling.",
+    business: "Pelamin Artistry",
+    description: "Pelamin daises and Malay wedding styling.",
     tax: tax(0, 0),
     items: [
       decor("pelamin", "Pelamin dais", "Backdrops and stage", "piece", 380_000, "#d4a84b"),
@@ -250,8 +252,8 @@ export const DECORATORS = [
   },
   {
     owner: "sample-d-marigold",
-    business: "SAMPLE Mandap & Marigold",
-    description: "SAMPLE decorator for demonstration. Mandap structures and marigold garlands for Indian weddings.",
+    business: "Mandap & Marigold",
+    description: "Mandap structures and marigold garlands for Indian weddings.",
     tax: tax(0, 900),
     items: [
       decor("mandap", "Mandap structure", "Backdrops and stage", "piece", 420_000, "#e08a2c"),

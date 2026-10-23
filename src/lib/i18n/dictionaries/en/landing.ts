@@ -18,13 +18,16 @@ export const landing = {
   "landing.step4Body": "Share your favourite options with family and see where everyone agrees.",
 
   // HeroCrossfade
-  "landing.hero.beforeAlt": "SAMPLE illustration of an empty function hall",
-  "landing.hero.afterAlt": "SAMPLE illustration of the same hall decorated with a floral arch, draped tables and warm lights",
-  "landing.hero.decorated": "Decorated",
-  "landing.hero.today": "Today",
-  "landing.hero.caption": "SAMPLE illustration. Real renders use the venue's own photos and decor.",
-  "landing.hero.showBefore": "Show the room before",
-  "landing.hero.showAfter": "Show it decorated",
+  "landing.hero.glasshouse": "Glasshouse ballroom",
+  "landing.hero.ballroom": "Grand ballroom",
+  "landing.hero.lawn": "Garden lawn",
+  "landing.hero.rooftop": "Rooftop terrace",
+  "landing.hero.glasshouseAlt": "A bright dining room with tall windows and greenery, tables set for a meal",
+  "landing.hero.ballroomAlt": "A hotel banquet hall with chandeliers and long dining tables",
+  "landing.hero.lawnAlt": "Rows of white chairs on a green lawn, set up for an outdoor ceremony",
+  "landing.hero.rooftopAlt": "A rooftop terrace with seating at sunset",
+  "landing.hero.caption": "Rooms you can plan in on WeddingVista.",
+  "landing.hero.next": "Next photo",
   "landing.privacy": "Privacy notice",
   "landing.footer": "Prices shown are estimates until a vendor confirms them.",
 } as const;

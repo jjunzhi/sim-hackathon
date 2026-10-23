@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// Loads (or removes) SAMPLE listings for demonstration: 9 venues and 3
-// decorators, every name marked SAMPLE, with a public "these are SAMPLE
-// listings" note on the catalog while they're loaded. Uses the Admin SDK.
+// Loads (or removes) the demonstration listings: 9 venues and 3 decorators.
+// They are fictional; at the product owner's request (2026-10-23) the site
+// shows no "SAMPLE" wording for them. config/sampleListings records every id
+// so `remove` deletes them all. Uses the Admin SDK.
 //
 //   npm run sample-venues -- load   --emulator | --project <id> [--bucket <name>] [--photos <dir>]
 //   npm run sample-venues -- remove --emulator | --project <id> [--bucket <name>]
 //
 // Room photos come from scripts/sample-venues/photos/<venueId>--<spaceId>.jpg
 // (licensed stock, credited in CREDITS.md; --photos <dir> uses another folder).
-// Any room without one gets an illustrated SAMPLE scene instead.
+// Any room without one gets an illustrated scene (marked ILLUSTRATION) instead.
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -77,7 +78,7 @@ async function items(uid, list) {
     const path = `vendors/${uid}/items/${it.id}/p1.webp`;
     await put(path, await sharp(Buffer.from(swatchSvg(it.hex, it.name))).webp({ quality: 85 }).toBuffer(), "image/webp");
     await db.doc(`vendors/${uid}/items/${it.id}`).set({
-      name: it.name, category: it.category, unit: it.unit, priceCents: it.priceCents, description: "SAMPLE item for demonstration.",
+      name: it.name, category: it.category, unit: it.unit, priceCents: it.priceCents, description: "",
       photo: photo(path, 800, 600, "image/webp"), active: true, dietaryTags: it.dietaryTags, createdAt: now, updatedAt: now,
     });
   }
@@ -107,7 +108,7 @@ async function load() {
       });
     }
     await items(v.owner, v.items);
-    for (const [i, date] of v.blocked.entries()) await db.doc(`vendors/${v.owner}/blockedDates/sample-${i}`).set({ date, note: "SAMPLE booking", createdAt: now, updatedAt: now });
+    for (const [i, date] of v.blocked.entries()) await db.doc(`vendors/${v.owner}/blockedDates/sample-${i}`).set({ date, note: "Booked", createdAt: now, updatedAt: now });
     console.error(`  venue ${id}: ${v.spaces.length} room(s), ${v.items.length} item(s)`);
   }
   for (const d of DECORATORS) {
@@ -116,13 +117,12 @@ async function load() {
     await items(d.owner, d.items);
     if (d.package) {
       const { id, ...p } = d.package;
-      await db.doc(`vendors/${d.owner}/packages/${id}`).set({ ...p, description: "SAMPLE package.", photo: null, active: true, createdAt: now, updatedAt: now });
+      await db.doc(`vendors/${d.owner}/packages/${id}`).set({ ...p, description: "", photo: null, active: true, createdAt: now, updatedAt: now });
     }
     console.error(`  decorator ${d.owner}: ${d.items.length} item(s)`);
   }
   await db.doc("config/sampleListings").set({ venueIds, vendorUids, loadedAtMs: Date.now() });
-  await db.doc("config/catalog").set({ sampleListings: true }, { merge: true });
-  console.log(`Loaded ${venueIds.length} SAMPLE venues and ${DECORATORS.length} SAMPLE decorators. The catalog now shows the SAMPLE note.`);
+  console.log(`Loaded ${venueIds.length} demonstration venues and ${DECORATORS.length} decorators (recorded in config/sampleListings for removal).`);
 }
 
 async function remove() {

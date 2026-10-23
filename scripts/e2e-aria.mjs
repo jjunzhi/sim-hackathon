@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Aria (Rose Garden) walkthrough on fresh emulators with the SAMPLE venues
+// Aria (Rose Garden) walkthrough on fresh emulators with the demonstration venues
 // loaded, in DEMO mode: the brief and budget, Aria's alerts (over budget,
 // date unavailable, over capacity), labelled options with Apply / Adjust /
 // Find alternatives / Not now, a venue shortlist, handing off to the
@@ -81,7 +81,7 @@ await u.waitForText("Rose Garden plan", 15_000);
 check("landing: links to Rose Garden", await cdp.evaluate("!!document.querySelector('a[href=\"/rose-garden\"]')"), true);
 
 // 2. Sign up from the Studio and save a plan.
-await u.goto(`${base}/studio/sample-garden-pavilion`);
+await u.goto(`${base}/studio/garden-pavilion`);
 await u.waitForText("Plan your day", 20_000);
 await u.clickButton("Save your plan");
 await u.waitForText("Create your account", 15_000);
@@ -93,7 +93,7 @@ await u.waitFor("location.search.includes('plan=')", { timeout: 30_000, what: "p
 await u.waitForText("Saved", 15_000);
 const planId = new URL(await cdp.evaluate("location.href")).searchParams.get("plan");
 
-// A date the SAMPLE venue has blocked.
+// A date the venue has blocked.
 await u.fill("Wedding date (optional)", "2027-05-15");
 await sleep(2500);
 
@@ -127,7 +127,7 @@ await sleep(2500); // autosave
 // 5. Aria noticed: over budget and the date is unavailable, shown in the Studio.
 await u.waitForText("Aria noticed", 15_000);
 check("studio alert: over budget", await cdp.evaluate("/The estimate is \\$[\\d,]+\\.\\d{2} over your budget\\./.test(document.body.innerText)"), true);
-check("studio alert: date unavailable", await has("SAMPLE Garden Pavilion marked your wedding date as unavailable."), true);
+check("studio alert: date unavailable", await has("Garden Pavilion marked your wedding date as unavailable."), true);
 await shot("studio-alerts");
 
 // 6. Ask about the budget: labelled options, each with four choices.
@@ -164,12 +164,12 @@ await waitDialog("Applied with your changes.");
 // 7. Shortlist of other listed venues.
 await send("Show me other venues");
 await waitDialog("Venues that could fit");
-check("shortlist: SAMPLE venues only", await cdp.evaluate("[...document.querySelectorAll('[role=dialog] a[href^=\"/studio/\"]')].length > 0 && [...document.querySelectorAll('[role=dialog] a[href^=\"/studio/\"]')].every(a => a.textContent.includes('SAMPLE'))"), true);
+check("shortlist: listed venues only", await cdp.evaluate("[...document.querySelectorAll('[role=dialog] a[href^=\"/studio/\"]')].length > 0"), true);
 check("shortlist: keeps this plan", (await dialogText()).includes("this plan stays as it is"), true);
 
 // 8. Find alternatives and Not now.
 await send("Add the floral arch");
-await cardButton("Add: SAMPLE Floral arch", "Find alternatives");
+await cardButton("Add: Floral arch", "Find alternatives");
 await waitDialog("Asked Aria for a different option.");
 await waitDialog("Please suggest a different option instead of this", "alternatives message sent");
 await sleep(2500);
@@ -230,7 +230,7 @@ await closeDialog();
 await sleep(2500); // autosave
 
 // 12. Saved: after reload the plan has Aria's applied changes; the print page has the timeline and budget.
-await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}`);
+await u.goto(`${base}/studio/garden-pavilion?plan=${planId}`);
 await u.waitForText("150 guests", 20_000);
 check("saved: 150 guests (adjusted)", true, true);
 check("saved: Off-Peak pricing", await has("Off-Peak"), true);
@@ -242,7 +242,7 @@ check("print: budget", await has("Budget: $20,000.00"), true);
 await shot("print-timeline", [1366]);
 
 // 13. Over capacity: more guests than the room holds.
-await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&assistant=1`);
+await u.goto(`${base}/studio/garden-pavilion?plan=${planId}&assistant=1`);
 await waitDialog("Hi, I'm Aria");
 await dialogButton("Brief");
 await u.fill("Guests", "300");
@@ -255,7 +255,7 @@ await sleep(2500); // autosave
 
 // 14. Aria in Tamil.
 await cdp.evaluate("localStorage.setItem('wv-locale', 'ta')");
-await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&assistant=1`);
+await u.goto(`${base}/studio/garden-pavilion?plan=${planId}&assistant=1`);
 await u.waitFor("document.documentElement.lang === 'ta-SG' && document.querySelector('[role=dialog]')", { timeout: 20_000, what: "Tamil Aria" });
 await sleep(1500);
 check("tamil: tabs translated", (await dialogText()).includes("உரையாடல்"), true);
