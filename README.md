@@ -63,8 +63,6 @@ It drives a real Chrome through decorator sign-up, inventory, a package, publish
 
 ## Aria and Rose Garden
 
-Rose Garden is the one couple plan, free during the pilot. `/rose-garden` lists only what the software does. It doesn't offer human planners, tours, insurance, bookings or payments.
-
 **Floating Aria.** A round button in the bottom-right corner of every page opens Aria. She is hidden on vendor pages, sign-in and sign-up, print pages and family links, and for vendor accounts.
 - **Outside the Studio** she is a friendly wedding planner (`ariaChat`, `functions/src/assistant/planner.ts`).
   - She recommends active, listed venues and decorators from the couple's preferences, and offers "Start planning here".
@@ -116,11 +114,17 @@ Rose Garden is the one couple plan, free during the pilot. `/rose-garden` lists 
 
 Walkthrough (fresh emulators, `npm run sample-venues -- load --emulator`, dev server running): `node scripts/e2e-aria.mjs` (36 checks; screenshots in `docs/screenshots/aria`).
 
-## SAMPLE venues and launch pages
-- **SAMPLE venues**: `npm run sample-venues -- load --emulator` (or `--project <id>`) loads 9 SAMPLE venues and 3 SAMPLE decorators with rooms, menus, dietary tags, access details and booked dates. The catalog then shows "These are SAMPLE listings for demonstration". `npm run sample-venues -- remove ...` deletes them all, including cached renders. Every name, address and price is fictional and labelled SAMPLE; addresses name only an area.
-- **Room photos** are licensed stock photos (Pexels and Unsplash), checked by eye for people and logos, cropped and stripped of metadata. They are in `scripts/sample-venues/photos`, with credits in `CREDITS.md`. Rooms without a suitable photo use illustrated SAMPLE scenes.
+## Demonstration venues and launch pages
+- **Demonstration venues**:
+  - `npm run sample-venues -- load --emulator` (or `--project <id>`) loads 9 venues and 3 decorators with rooms, menus, dietary tags, access details and booked dates.
+  - They are fictional. At the product owner's request (2026-10-23), the site shows no "SAMPLE" wording or demo note for them. Addresses name only an area.
+  - `config/sampleListings` records every id, so `npm run sample-venues -- remove ...` deletes them all, including cached renders. Remove them when real vendors are listed.
+- **Room photos** are licensed stock photos (Pexels and Unsplash), checked by eye for people and logos, cropped and stripped of metadata.
+  - They are in `scripts/sample-venues/photos`, with credits in `CREDITS.md`.
+  - The landing page rotates four of them (`public/venues`).
+  - Rooms without a suitable photo use drawn scenes marked ILLUSTRATION.
 - **Launch pages**:
-  - `/privacy` (a DRAFT notice, to be reviewed against the PDPA, linked from sign-up and the landing page).
+  - `/privacy` (reviewed by the product owner on 2026-10-23; linked from sign-up and the landing page). It still needs a contact address for data requests.
   - A branded 404 and error page.
   - `robots.txt` (family links `/s/` and signed-in areas are never indexed) and `sitemap.xml`.
   - A share preview image, and page metadata from `NEXT_PUBLIC_SITE_URL`.

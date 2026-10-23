@@ -25,7 +25,7 @@ import { couple, vendor } from "@/design/tokens.mjs";
 type Theme = "couple" | "vendor";
 
 // SAMPLE values for the showcase only. Not real venue data.
-const SAMPLE_ROOM = { name: "SAMPLE Garden Ballroom", min: 80, max: 250 };
+const SAMPLE_ROOM = { name: "Garden Ballroom", min: 80, max: 250 };
 const SAMPLE_PER_GUEST_CENTS = 18_800;
 
 const STEPS = [
@@ -128,7 +128,7 @@ function HeadcountDemo() {
               Seats {SAMPLE_ROOM.min} to {SAMPLE_ROOM.max} guests
             </p>
           </div>
-          <Badge tone="sample">SAMPLE data</Badge>
+          <Badge tone="sample">Example data</Badge>
         </div>
 
         <Slider
@@ -171,7 +171,7 @@ function HeadcountDemo() {
         <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg bg-subtle p-4">
           <div>
             <p className="text-small text-muted">
-              SAMPLE package at <span className="num">{formatSGD(SAMPLE_PER_GUEST_CENTS)}</span> per guest
+              Example package at <span className="num">{formatSGD(SAMPLE_PER_GUEST_CENTS)}</span> per guest
             </p>
             <p className="font-display text-h2">
               <AnimatedNumber value={total} format={(c) => formatSGD(c)} />
@@ -192,7 +192,7 @@ function AnimatedNumberDemo() {
     <Card>
       <CardBody className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-small text-muted">SAMPLE estimate total</p>
+          <p className="text-small text-muted">Example estimate total</p>
           <p className="font-display text-display leading-none">
             <AnimatedNumber value={value} format={(c) => formatSGD(c)} />
           </p>
@@ -222,7 +222,7 @@ export function DesignShowcase({ initialTheme = "couple" }: { initialTheme?: The
     <main className="container-page pb-24">
       <header className="flex flex-col gap-6 py-10 sm:py-16">
         <div className="flex flex-wrap items-center gap-3">
-          <Badge tone="sample">SAMPLE content</Badge>
+          <Badge tone="sample">Example content</Badge>
           <span className="text-small text-muted">Internal design reference. Nothing here is real venue data.</span>
         </div>
         <h1 className="text-display">WeddingVista design system</h1>
@@ -266,7 +266,7 @@ export function DesignShowcase({ initialTheme = "couple" }: { initialTheme?: The
           <Badge tone="confirmed">Vendor Confirmed · Valid until 5 Nov 2026</Badge>
           <Badge tone="expired">Expired</Badge>
           <Badge tone="warning">Over capacity</Badge>
-          <Badge tone="sample">SAMPLE</Badge>
+          <Badge tone="sample">Example</Badge>
           <Badge tone="neutral">Wheelchair access</Badge>
         </div>
       </Section>
@@ -279,7 +279,7 @@ export function DesignShowcase({ initialTheme = "couple" }: { initialTheme?: The
           <Select label="Theme" options={THEMES_OPTIONS} value={style} onValueChange={setStyle} hint="Fusion themes blend two traditions." />
         </div>
         <fieldset className="flex flex-col gap-1">
-          <legend className="mb-2 text-small font-semibold text-ink">SAMPLE inventory</legend>
+          <legend className="mb-2 text-small font-semibold text-ink">Example inventory</legend>
           <Checkbox label="Floral arch" description={`${formatSGD(120_000)} per piece`} defaultChecked />
           <Checkbox label="Table centrepieces" description={`${formatSGD(8_800)} per table`} />
           <Checkbox label="Chair sashes" description={`${formatSGD(350)} per guest`} />
@@ -339,7 +339,7 @@ export function DesignShowcase({ initialTheme = "couple" }: { initialTheme?: The
           open={sheetOpen}
           onOpenChange={setSheetOpen}
           title="Filter venues"
-          description="SAMPLE filters"
+          description="filters"
           footer={
             <Button variant="primary" onClick={() => setSheetOpen(false)}>
               Show venues
@@ -360,10 +360,10 @@ export function DesignShowcase({ initialTheme = "couple" }: { initialTheme?: The
         intro="Drag the handle, or focus it and use the arrow keys (Shift for fine steps)."
       >
         <BeforeAfterSlider
-          before={{ src: "/samples/hall-before.svg", alt: "SAMPLE illustration of an empty function hall" }}
+          before={{ src: "/samples/hall-before.svg", alt: "illustration of an empty function hall" }}
           after={{
             src: "/samples/hall-after.svg",
-            alt: "SAMPLE illustration of the same hall with a floral arch, draped tables and warm lights",
+            alt: "illustration of the same hall with a floral arch, draped tables and warm lights",
           }}
           unoptimized
           aspect="4 / 3"
@@ -390,9 +390,9 @@ export function DesignShowcase({ initialTheme = "couple" }: { initialTheme?: The
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {[
-            { icon: <Users aria-hidden className="size-5" />, title: "SAMPLE Garden Ballroom", meta: "80 to 250 guests" },
-            { icon: <Armchair aria-hidden className="size-5" />, title: "SAMPLE Rooftop Terrace", meta: "40 to 120 guests" },
-            { icon: <Images aria-hidden className="size-5" />, title: "SAMPLE Heritage Shophouse", meta: "30 to 80 guests" },
+            { icon: <Users aria-hidden className="size-5" />, title: "Garden Ballroom", meta: "80 to 250 guests" },
+            { icon: <Armchair aria-hidden className="size-5" />, title: "Rooftop Terrace", meta: "40 to 120 guests" },
+            { icon: <Images aria-hidden className="size-5" />, title: "Heritage Shophouse", meta: "30 to 80 guests" },
           ].map((c) => (
             <motion.li key={c.title} variants={revealItem}>
               <Card interactive>

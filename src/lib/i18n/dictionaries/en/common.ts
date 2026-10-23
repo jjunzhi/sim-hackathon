@@ -44,7 +44,6 @@ export const common = {
   "badge.vendorConfirmedUntil": "Vendor Confirmed · Valid until {date}",
   "badge.expired": "Expired",
   "badge.verified": "Verified",
-  "badge.sample": "SAMPLE",
   "badge.draft": "Draft",
   "badge.needsReview": "Draft content: needs community review",
 

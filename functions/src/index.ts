@@ -43,7 +43,7 @@ const enforceAppCheck = process.env.FUNCTIONS_EMULATOR !== "true";
  * the user owns, then the Auth account. Safe to retry: every step is idempotent.
  */
 // Bound to the Stripe key so a deleted vendor's subscription is cancelled, not left charging.
-export const deleteAccount = onCall({ enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
+export const deleteAccount = onCall({ invoker: "public", enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
   const auth = request.auth;
   if (!auth) throw new HttpsError("unauthenticated", "Please sign in first.");
 
@@ -79,7 +79,7 @@ export const deleteAccount = onCall({ enforceAppCheck, secrets: [stripeSecretKey
  * before calling the model and refunded on failure.
  */
 export const requestRender = onCall(
-  { enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 180, memory: "1GiB" },
+  { invoker: "public", enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 180, memory: "1GiB" },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
     // Family members voting on a link are anonymous: they can't spend render allowances.
@@ -102,7 +102,7 @@ export const requestRender = onCall(
  * (guests, room, tier, theme, items, date). Couples apply suggestions
  * themselves. Same key as renders; with no key it runs a labelled DEMO.
  */
-export const planAssistant = onCall({ enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 60, memory: "512MiB" }, async (request) => {
+export const planAssistant = onCall({ invoker: "public", enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 60, memory: "512MiB" }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
   if (request.auth.token.firebase?.sign_in_provider === "anonymous") throw new HttpsError("permission-denied", "Please create an account to use the planning assistant.");
   const profile = await getFirestore().doc(`users/${request.auth.uid}`).get();

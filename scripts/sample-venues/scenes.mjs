@@ -1,10 +1,10 @@
-// Illustrated SAMPLE room scenes (2048x1536 SVG), one per room type. Drawn in
-// code so there are no licensing questions; each carries a "SAMPLE
-// ILLUSTRATION" mark. Replaced by approved stock photos where we have them.
+// Illustrated room scenes (2048x1536 SVG), one per room type. Drawn in code
+// so there are no licensing questions; each carries an "ILLUSTRATION" mark so
+// it is never taken for a photo. Replaced by approved stock photos where we have them.
 
 const W = 2048;
 const H = 1536;
-const mark = `<g><rect x="56" y="${H - 116}" width="520" height="64" rx="32" fill="#ffffff" fill-opacity="0.88"/><text x="316" y="${H - 73}" font-family="Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="4" text-anchor="middle" fill="#2a2325">SAMPLE ILLUSTRATION</text></g>`;
+const mark = `<g><rect x="56" y="${H - 116}" width="400" height="64" rx="32" fill="#ffffff" fill-opacity="0.88"/><text x="256" y="${H - 73}" font-family="Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="4" text-anchor="middle" fill="#2a2325">ILLUSTRATION</text></g>`;
 const svg = (body, defs = "") => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defs}</defs>${body}${mark}</svg>`;
 
 // Round banquet tables in perspective: rows get smaller towards the back.

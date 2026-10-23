@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Launch walkthrough on fresh emulators with the SAMPLE venues loaded
-// (npm run sample-venues -- load --emulator): the catalog and its SAMPLE note,
+// Launch walkthrough on fresh emulators with the demonstration venues loaded
+// (npm run sample-venues -- load --emulator): the catalog with no SAMPLE wording,
 // the planning assistant (DEMO mode) from signed-out to Apply, the assistant in
 // Tamil, and the launch pages (privacy, 404, robots, sitemap, share image,
 // security headers). Saves screenshots.
@@ -38,22 +38,23 @@ async function shot(name, widths = [1366, 390]) {
 
 await setViewport(cdp, 1366);
 
-// 1. Catalog: nine SAMPLE venues, with the SAMPLE note.
+// 1. Catalog: nine demonstration venues, with no SAMPLE wording anywhere.
 await u.goto(`${base}/venues`);
 await u.waitForText("9 venues", 20_000);
-check("catalog: 9 SAMPLE venues", true, true);
-check("catalog: SAMPLE note shown", await has("These are SAMPLE listings for demonstration."), true);
-check("catalog: every venue name says SAMPLE", await cdp.evaluate("[...document.querySelectorAll('h3, h2')].filter(h => h.closest('a[href^=\"/venues/\"]')).every(h => h.textContent.includes('SAMPLE'))"), true);
+check("catalog: 9 venues", true, true);
+check("catalog: no SAMPLE note", await cdp.evaluate("!document.body.innerText.includes('SAMPLE')"), true);
+check("catalog: venue names without SAMPLE", await cdp.evaluate("[...document.querySelectorAll('h3, h2')].filter(h => h.closest('a[href^=\"/venues/\"]')).every(h => !h.textContent.includes('SAMPLE'))"), true);
 await shot("catalog");
 await u.clickLabel("Halal");
 await sleep(400);
-check("filter: halal menus = 4 SAMPLE venues", await has("4 venues"), true);
-await u.goto(`${base}/venues/sample-grand-orchard`);
-await u.waitForText("SAMPLE Grand Ballroom", 20_000);
+check("filter: halal menus = 4 venues", await has("4 venues"), true);
+await u.goto(`${base}/venues/grand-orchard`);
+await u.waitForText("Grand Ballroom", 20_000);
+check("venue page: no SAMPLE wording", await cdp.evaluate("!document.body.innerText.includes('SAMPLE')"), true);
 await shot("venue-grand-orchard");
 
 // 2. Assistant, signed out: asks to save first.
-await u.goto(`${base}/studio/sample-garden-pavilion`);
+await u.goto(`${base}/studio/garden-pavilion`);
 await u.waitForText("Plan your day", 20_000);
 await u.clickButton("Plan with Aria");
 await u.waitFor("document.querySelector('[role=dialog]')");
@@ -71,7 +72,7 @@ await u.waitForText("Saved", 15_000);
 const planId = new URL(await cdp.evaluate("location.href")).searchParams.get("plan");
 
 // 3. Ask, see a checked suggestion with its cost, apply it.
-await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&assistant=1`);
+await u.goto(`${base}/studio/garden-pavilion?plan=${planId}&assistant=1`);
 await u.waitFor("document.querySelector('[role=dialog]')", { timeout: 20_000, what: "assistant opens from ?assistant=1" });
 check("assistant: intro shown", (await dialogText()).includes("Tell me about your wedding"), true);
 await u.fill("Your message", "We'd like 150 guests, the Modern Botanical theme, and add the floral arch");
@@ -81,7 +82,7 @@ const d = await dialogText();
 check("assistant: DEMO labelled", d.includes("DEMO: the AI isn't switched on yet"), true);
 check("assistant: guests change listed", /Guests: \d+ to 150/.test(d), true);
 check("assistant: theme change listed", d.includes("Theme: Modern Botanical"), true);
-check("assistant: item from the real catalog", d.includes("Add: SAMPLE Floral arch"), true);
+check("assistant: item from the real catalog", d.includes("Add: Floral arch"), true);
 // Either form is right: a minimum spend can absorb an added item, leaving the total unchanged.
 check("assistant: estimate effect shown", /Estimate: \$[\d,]+\.\d{2} to \$[\d,]+\.\d{2}|Estimate stays at \$[\d,]+\.\d{2}/.test(d), true);
 check("assistant: messages left today", d.includes("29 messages left today"), true);
@@ -91,13 +92,13 @@ await u.waitFor("document.querySelector('[role=dialog]')?.innerText.includes('Ap
 await cdp.evaluate("document.querySelector('[role=dialog] button[aria-label]')?.click()");
 await sleep(2500); // autosave
 check("applied: plan shows 150 guests", await cdp.evaluate("document.body.innerText.includes('150 guests')"), true);
-await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&step=style`);
+await u.goto(`${base}/studio/garden-pavilion?plan=${planId}&step=style`);
 await u.waitForText("The venue's own decor", 20_000);
-check("applied and saved: arch chosen after reload", await cdp.evaluate("(() => { const l = [...document.querySelectorAll('label')].find(x => x.textContent.trim().startsWith('SAMPLE Floral arch')); const b = l && document.getElementById(l.htmlFor); return b?.getAttribute('aria-checked') ?? b?.getAttribute('data-state'); })()"), "true");
+check("applied and saved: arch chosen after reload", await cdp.evaluate("(() => { const l = [...document.querySelectorAll('label')].find(x => x.textContent.trim().startsWith('Floral arch')); const b = l && document.getElementById(l.htmlFor); return b?.getAttribute('aria-checked') ?? b?.getAttribute('data-state'); })()"), "true");
 
 // 4. The assistant in Tamil.
 await cdp.evaluate("localStorage.setItem('wv-locale', 'ta')");
-await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&assistant=1`);
+await u.goto(`${base}/studio/garden-pavilion?plan=${planId}&assistant=1`);
 await u.waitFor("document.documentElement.lang === 'ta-SG' && document.querySelector('[role=dialog]')", { timeout: 20_000, what: "Tamil assistant" });
 await sleep(1500);
 check("assistant in Tamil: tabs translated", (await dialogText()).includes("உரையாடல்"), true);

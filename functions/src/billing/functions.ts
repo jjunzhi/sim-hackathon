@@ -37,7 +37,7 @@ async function requireVendor(uid: string | undefined) {
 const billingUrl = (status?: string) => `${appBaseUrl.value().replace(/\/+$/, "")}/vendor/billing${status ? `?checkout=${status}` : ""}`;
 
 /** Starts Stripe Checkout for the monthly plan. Returns the hosted page URL. */
-export const createCheckoutSession = onCall({ region: REGION, enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
+export const createCheckoutSession = onCall({ invoker: "public", region: REGION, enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
   const uid = await requireVendor(request.auth?.uid);
   const stripe = stripeClient();
   const price = stripePriceId.value().trim();
@@ -68,7 +68,7 @@ export const createCheckoutSession = onCall({ region: REGION, enforceAppCheck, s
 });
 
 /** Opens the Stripe Customer Portal: card, invoices, cancel. */
-export const createPortalSession = onCall({ region: REGION, enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
+export const createPortalSession = onCall({ invoker: "public", region: REGION, enforceAppCheck, secrets: [stripeSecretKey] }, async (request) => {
   const uid = await requireVendor(request.auth?.uid);
   const stripe = stripeClient();
   if (!stripe) throw new HttpsError("failed-precondition", "billing-not-configured");
@@ -83,7 +83,7 @@ export const createPortalSession = onCall({ region: REGION, enforceAppCheck, sec
  * once, and answers 2xx quickly so Stripe doesn't retry needlessly.
  * Point a Stripe event destination here with the events listed in the README.
  */
-export const stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, stripeWebhookSecret], maxInstances: 5 }, async (req, res) => {
+export const stripeWebhook = onRequest({ invoker: "public", region: REGION, secrets: [stripeSecretKey, stripeWebhookSecret], maxInstances: 5 }, async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).send("Method not allowed");
     return;
@@ -122,7 +122,7 @@ export const stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretK
 });
 
 /** Pilot vendor invites: an invite link marks the account as a pilot, free until the invite's date. */
-export const redeemInvite = onCall({ region: REGION, enforceAppCheck }, async (request) => {
+export const redeemInvite = onCall({ invoker: "public", region: REGION, enforceAppCheck }, async (request) => {
   const uid = await requireVendor(request.auth?.uid);
   const code = typeof request.data?.code === "string" ? request.data.code.trim() : "";
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(code)) throw new HttpsError("invalid-argument", "invalid-code");
