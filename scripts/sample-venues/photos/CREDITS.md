@@ -85,3 +85,37 @@ photo, not Unsplash+).
 | items/veg-bbq.jpg | Vegetarian grill | Daniel Hooper | [Unsplash](https://unsplash.com/photos/text-1qiifK3y8FE) | Vegetable skewers only |
 | items/veg-set.jpg | Vegetarian set dinner | Max Saeling | [Unsplash](https://unsplash.com/photos/sliced-carrots-and-green-vegetable-on-white-ceramic-plate-k4vi3P7Ucvo) | Vegetables only |
 | items/veg-thali.jpg | Vegetarian thali buffet | Dipesh Gurav | [Unsplash](https://unsplash.com/photos/variety-of-cuisines-diFM5ohltS4) | Vegetarian dishes only |
+
+### More menus (added 2026-10-23)
+
+Twenty-four more menu photos for the new cuisines, each approved by the product owner
+before use, checked the same way, under the Unsplash License (all free photos). Four
+new menus keep drawn illustrations because no suitable photo was found: Cantonese
+private-dining, Peranakan tok panjang, Eurasian family feast and Eurasian buffet.
+
+| File | Item | Photographer | Source | Check notes |
+|---|---|---|---|---|
+| items/nasi-padang.jpg | Malay nasi padang buffet | nji's photo (@fnblovers) | [Unsplash](https://unsplash.com/photos/nasi-padang-rice-with-spicy-sides-qe1mZLt7t2Y) | Halal menu: no pork or alcohol |
+| items/biryani-buffet.jpg | North Indian halal buffet | Shreyak Singh | [Unsplash](https://unsplash.com/photos/cooked-food-on-white-ceramic-plate-0j4bisyPo3M) | Chicken biryani; no pork or alcohol |
+| items/mezze-grill.jpg | Middle Eastern mezze and grill (halal) | Chez Le Libanais | [Unsplash](https://unsplash.com/photos/middle-eastern-mezze-platter-dcgMs7GEj2M) | Restaurant's account, no branding in frame; no pork or alcohol |
+| items/cantonese-seafood.jpg | Cantonese seafood banquet | You Le | [Unsplash](https://unsplash.com/photos/a-white-plate-topped-with-a-fish-covered-in-veggies-izLwrudM-RA) | Steamed fish; no people or logos |
+| items/banana-leaf.jpg | South Indian vegetarian banana-leaf (two venues) | Susmitha Veganosaurus | [Unsplash](https://unsplash.com/photos/south-indian-breakfast-with-dosa-idli-CkJBLkGW-zw) | Dosa, idli, vada, chutney; no meat |
+| items/japanese-korean.jpg | Japanese and Korean buffet | Riccardo Bergamini | [Unsplash](https://unsplash.com/photos/food-photography-of-varieties-of-sushies-O2yNzXdqOu0) | No people or logos |
+| items/western-plated.jpg | Western plated dinner | Jason Leung | [Unsplash](https://unsplash.com/photos/medium-rare-sliced-steak-in-white-ceramic-plate-O67LZfeyYBk) | Beef; the menu carries no no-beef tag |
+| items/nyonya-kueh.jpg | Nyonya kueh and tea table | You Le | [Unsplash](https://unsplash.com/photos/rows-of-colorful-layered-cakes-on-wooden-trays-WMscq_3YADI) | Cropped to the trays to remove readable price signs |
+| items/indian-veg-buffet.jpg | North Indian vegetarian buffet | Kalyani Akella | [Unsplash](https://unsplash.com/photos/a-metal-bowl-filled-with-food-next-to-a-bowl-of-rice-vgTntT8PmIM) | Paneer curry; no meat |
+| items/mediterranean.jpg | Mediterranean sharing menu | Alexandra Tran | [Unsplash](https://unsplash.com/photos/a-wooden-table-topped-with-bowls-of-food-IjrBf8rtKXE) | No people or logos |
+| items/thai-vegan.jpg | Thai vegan curry and noodle bar | iMattSmart | [Unsplash](https://unsplash.com/photos/vegetable-dish-on-white-ceramic-plate-wgvbmn4d0Wk) | Tofu, bok choy, eggplant; no meat or seafood |
+| items/indonesian-buffet.jpg | Indonesian halal buffet | qaz farid | [Unsplash](https://unsplash.com/photos/a-close-up-of-a-bowl-of-food-on-a-table-bX7UPKH1vxs) | Rendang; no pork or alcohol |
+| items/halal-western.jpg | Western halal plated dinner | Elena Leya | [Unsplash](https://unsplash.com/photos/chicken-breast-dinner-with-peas-DBVIb_rWUKw) | Chicken; no pork or alcohol |
+| items/halal-mezze.jpg | Mediterranean halal grill | Victoria Shes | [Unsplash](https://unsplash.com/photos/grilled-meat-and-vegetable-on-the-table-UC0HZdUitWY) | Chicken and lamb; no pork or alcohol |
+| items/korean-bbq.jpg | Korean barbecue | You Le | [Unsplash](https://unsplash.com/photos/meat-and-vegetables-grilling-on-a-barbecue-xIVargormXU) | No people; tongs only |
+| items/vietnamese-stations.jpg | Vietnamese street-food stations | Jamie Trinh | [Unsplash](https://unsplash.com/photos/a-meal-of-pho-banh-mi-and-orange-juice-FZRZev12J8Q) | No people or labels |
+| items/vegan-mezze.jpg | Vegan Middle Eastern buffet | Chez Le Libanais | [Unsplash](https://unsplash.com/photos/falafel-bowl-with-pickles-and-spices-9oepWGu1bSQ) | Falafel and pickles; plant-based |
+| items/nasi-ambeng.jpg | Javanese nasi ambeng sharing trays | Ludo Poiré | [Unsplash](https://unsplash.com/photos/a-green-plate-topped-with-lots-of-food-6yz447bBNwA) | No pork or alcohol |
+| items/mamak-biryani.jpg | Indian Muslim biryani buffet | Mario Raj | [Unsplash](https://unsplash.com/photos/a-white-bowl-filled-with-rice-and-meat-ysmeQt1dzcw) | Chicken biryani; no pork or alcohol |
+| items/satay-station.jpg | Satay and grill station | K Azwan | [Unsplash](https://unsplash.com/photos/a-white-plate-topped-with-meat-and-veggies-next-to-a-bowl-of-sauce-bcrdp-x6-ZU) | Chicken satay with ketupat; no pork or alcohol |
+| items/briyani-gam.jpg | Johor nasi briyani gam buffet | Shourav Sheikh | [Unsplash](https://unsplash.com/photos/a-platter-of-food-on-a-red-cloth-j9lowNcnl04) | No pork or alcohol |
+| items/chinese-veg-buffet.jpg | Chinese vegetarian buffet | Kuali Nenek | [Unsplash](https://unsplash.com/photos/sizzling-tofu-skillet-dinner-BE0-pX6-J04) | Tofu, mushrooms, vegetables; no meat |
+| items/teochew-set.jpg | Teochew set dinner | Davis Dai | [Unsplash](https://unsplash.com/photos/close-up-of-succulent-roasted-duck-in-rich-sauce-pv-nOwZg2Y8) | Braised duck; no people or logos |
+| items/japanese-kaiseki.jpg | Japanese kaiseki set | Zion C | [Unsplash](https://unsplash.com/photos/a-table-topped-with-plates-and-bowls-of-food-XzdUHwAun9Q) | No people; no readable labels |
