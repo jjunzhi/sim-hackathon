@@ -349,7 +349,7 @@ service cloud.firestore {
       return d.keys().hasOnly([
           'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
           'selections', 'savedRenders', 'weddingDate', 'budgetCents', 'brief', 'timeline',
-          'createdAt', 'updatedAt'])
+          'itinerary', 'createdAt', 'updatedAt'])
         && d.keys().hasAll([
           'ownerUid', 'name', 'venueId', 'spaceId', 'tierKey', 'headcount', 'themeId',
           'selections', 'savedRenders', 'createdAt', 'updatedAt'])
@@ -365,7 +365,16 @@ service cloud.firestore {
         && (d.get('budgetCents', null) == null || isInt(d.budgetCents, 1, 1000000000))
         && (d.get('brief', null) == null || validBrief(d.brief))
         && validTimeline(d.get('timeline', []))
+        && (d.get('itinerary', null) == null || validItinerary(d.itinerary))
         && d.updatedAt == request.time;
+    }
+
+    // The guest itinerary image's settings: an optional heading, a style, and the couple's approval.
+    function validItinerary(i) {
+      return i.keys().hasOnly(['title', 'style', 'approved']) && i.keys().hasAll(['title', 'style', 'approved'])
+        && isText(i.title, 80)
+        && i.style in ['classic', 'botanical', 'festive']
+        && i.approved is bool;
     }
 
     // Aria's planning brief: the couple's own words (short) and fixed tags.

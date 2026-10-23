@@ -13,6 +13,7 @@ import { RenderPanel } from "@/components/render/render-panel";
 import { FamilyLinks } from "@/components/sharing/family-links";
 import { CapacityStatus } from "@/components/studio/capacity-status";
 import { ItemPicker } from "@/components/studio/item-picker";
+import { ItineraryPanel } from "@/components/studio/itinerary-panel";
 import { AriaAlerts } from "@/components/studio/aria-alerts";
 import { PlanAssistant } from "@/components/studio/plan-assistant";
 import { detectAlerts } from "@/lib/assistant/alerts";
@@ -79,6 +80,7 @@ function defaultDraft(venue: CatalogVenue, spaces: WithId<Space>[], name: string
     budgetCents: null,
     brief: null,
     timeline: [],
+    itinerary: null,
   };
 }
 
@@ -181,6 +183,7 @@ function Studio() {
         budgetCents: p.budgetCents ?? null,
         brief: p.brief ?? null,
         timeline: p.timeline ?? [],
+        itinerary: p.itinerary ?? null,
       };
       lastSaved.current = JSON.stringify(d);
       setDraft(d);
@@ -709,6 +712,14 @@ function Studio() {
                   ) : (
                     <p className="text-small text-muted">{t("studio.saveToPrint")}</p>
                   )}
+                </CardBody>
+              </Card>
+            )}
+
+            {stepIndex === 4 && saved && canSave && catalogs && (
+              <Card>
+                <CardBody>
+                  <ItineraryPanel plan={plan} venue={venue} space={space} catalogs={catalogs} onChange={update} />
                 </CardBody>
               </Card>
             )}

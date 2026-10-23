@@ -99,8 +99,24 @@ describe("plan budget, brief and timeline", () => {
         selections: Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`item:v:${i}`, 1])),
         brief: brief({ style: "s".repeat(200), notes: "n".repeat(500), traditions: ["Chinese", "Malay", "Indian", "Peranakan", "Western", "Fusion", "Halal-friendly"], dietaryTags: ["halal", "vegetarian", "vegan", "no-beef", "no-pork"] }),
         timeline: Array.from({ length: 15 }, (_, i) => line(`${String(i).padStart(2, "0")}:30`, "x".repeat(120))),
+        itinerary: { title: "t".repeat(80), style: "festive", approved: true },
       }),
     );
+  });
+
+  it("itinerary: an optional heading, a known style and the approval", async () => {
+    const it = (o: Record<string, unknown>) => ({ title: "Mei & Arjun's Wedding", style: "classic", approved: true, ...o });
+    await assertSucceeds(update({ itinerary: it({}) }));
+    await assertSucceeds(update({ itinerary: it({ title: "", style: "botanical", approved: false }) }));
+    await assertSucceeds(update({ itinerary: null }));
+    await assertFails(update({ itinerary: it({ title: "x".repeat(81) }) }));
+    await assertFails(update({ itinerary: it({ style: "gothic" }) }));
+    await assertFails(update({ itinerary: it({ approved: "yes" }) }));
+    await assertFails(update({ itinerary: it({ phone: "+65 9123 4567" }) }));
+    const missing: Record<string, unknown> = it({});
+    delete missing.style;
+    await assertFails(update({ itinerary: missing }));
+    await assertFails(updateDoc(doc(db(OTHER_COUPLE), "projects", PLAN), { itinerary: it({}), updatedAt: serverTimestamp() }));
   });
 
   it("someone else can't set them", async () => {
