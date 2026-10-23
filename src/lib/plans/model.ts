@@ -22,6 +22,15 @@ export interface Plan {
   brief?: Brief | null;
   /** Day-of timeline, a DRAFT the couple edits. */
   timeline?: TimelineEntry[];
+  /** The guest itinerary made from the timeline: the couple's heading, the image style, and whether they approved it. */
+  itinerary?: PlanItinerary | null;
+}
+
+export interface PlanItinerary {
+  /** Optional heading the couple types, e.g. "Mei & Arjun's Wedding". At most 80 characters. */
+  title: string;
+  style: "classic" | "botanical" | "festive";
+  approved: boolean;
 }
 
 export interface SavedRender {

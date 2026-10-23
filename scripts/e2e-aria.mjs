@@ -14,7 +14,7 @@ import { capture, launch, setViewport, sleep } from "./lib/cdp.mjs";
 import { ui } from "./lib/ui.mjs";
 
 const outDir = process.argv[2] ?? "docs/screenshots/aria";
-const base = "http://localhost:3000";
+const base = process.env.E2E_BASE ?? "http://localhost:3000";
 const couple = { email: `aria.couple.${Date.now()}@example.test`, password: "Emulator-Only-a1r1a" };
 mkdirSync(outDir, { recursive: true });
 
