@@ -125,7 +125,7 @@ async function load() {
       await put(path, await roomImage(id, s.id, s.scene), "image/jpeg");
       await db.doc(`venues/${id}/spaces/${s.id}`).set({
         name: s.name, capacityMin: s.capacityMin, capacityMax: s.capacityMax, seatsPerTable: 10, tiers: s.tiers,
-        photo: photo(path, 2048, 1536, "image/jpeg"), photoVersion: 1, sortOrder: i, createdAt: now, updatedAt: now,
+        photo: photo(path, 2048, 1536, "image/jpeg"), photoVersion: s.photoVersion ?? 1, sortOrder: i, createdAt: now, updatedAt: now,
       });
     }
     await items(v.owner, v.items);

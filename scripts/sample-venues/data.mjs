@@ -28,7 +28,8 @@ export const VENUES = [
       menuOptions: ["halal", "vegetarian", "no-beef", "no-pork"],
     },
     spaces: [
-      { id: "glasshouse", name: "Glasshouse Ballroom", scene: "glasshouse", capacityMin: 80, capacityMax: 250, tiers: tiers.peak(1_200_000, 4_500_000, 650_000) },
+      // photoVersion 2: new photo on 2026-10-23, so renders of the old one are not reused.
+      { id: "glasshouse", name: "Glasshouse Ballroom", scene: "glasshouse", photoVersion: 2, capacityMin: 80, capacityMax: 250, tiers: tiers.peak(1_200_000, 4_500_000, 650_000) },
       { id: "terrace", name: "Orchid Terrace", scene: "garden", capacityMin: 30, capacityMax: 80, tiers: tiers.standard(300_000) },
     ],
     items: [
