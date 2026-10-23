@@ -116,6 +116,36 @@ export interface ShortlistEntry {
   reason: string;
 }
 
+/** A plan Aria suggests starting. Checked; the couple taps "Start planning here". */
+export interface PlanStart {
+  summary: string;
+  venueId: string;
+  venueName: string;
+  spaceId: string | null;
+  tierKey: TierKey | null;
+  headcount: number | null;
+  themeId: string | null;
+  weddingDate: string | null;
+  budgetCents: number | null;
+  brief: Brief | null;
+  selections: Record<string, number>;
+}
+
+export interface VendorPick {
+  vendorUid: string;
+  vendorName: string;
+  reason: string;
+}
+
+export interface PlannerResult {
+  reply: string;
+  shortlist: ShortlistEntry[];
+  vendors: VendorPick[];
+  plans: PlanStart[];
+  demo: boolean;
+  remainingToday: number;
+}
+
 /** Applies checked changes to a plan, exactly as the Studio's Apply button does. */
 export function applyChanges(plan: PlanSnapshot, changes: Change[], ctx: VenueContext): PlanSnapshot {
   const next: PlanSnapshot = { ...plan, selections: { ...plan.selections } };

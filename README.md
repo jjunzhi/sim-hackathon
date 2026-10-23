@@ -65,7 +65,25 @@ It drives a real Chrome through decorator sign-up, inventory, a package, publish
 
 Rose Garden is the one couple plan, free during the pilot. `/rose-garden` lists only what the software does. It doesn't offer human planners, tours, insurance, bookings or payments.
 
-**Aria** is the AI planning assistant: "Plan with Aria" in the Studio, or `?assistant=1` to open it. It has four tabs: Chat, Brief, Timeline and Decisions.
+**Floating Aria.** A round button in the bottom-right corner of every page opens Aria. She is hidden on vendor pages, sign-in and sign-up, print pages and family links, and for vendor accounts.
+- **Outside the Studio** she is a friendly wedding planner (`ariaChat`, `functions/src/assistant/planner.ts`).
+  - She recommends active, listed venues and decorators from the couple's preferences, and offers "Start planning here".
+  - That button stashes a plan and opens it in the Studio. A signed-in couple's plan is saved straight away; a visitor is asked to create an account.
+- **Visitors** chat through a guest session (anonymous sign-in), with 10 messages a day (`guestPerDay` in `config/assistantLimits`). Couples get 30.
+- **In the Studio** the same panel shows this plan's tools (below).
+
+Rose Garden is the one couple plan, free during the pilot. `/rose-garden` lists only what the software does. It doesn't offer human planners, tours, insurance, bookings or payments.
+
+**Floating Aria.** A round button in the bottom-right corner on every page opens Aria. It is hidden on vendor pages, during sign-in, on print pages and on family links.
+
+- **Outside the Studio she is a wedding planner** (`ariaChat` callable, `functions/src/assistant/planner.ts`):
+  - She recommends active, listed venues and listed decorators that fit the couple's guests, style, traditions, food and access needs.
+  - She can propose a plan; "Start planning here" opens it in the Studio, which saves it for a couple or asks a visitor to sign up first.
+  - Visitors can chat without an account, through an anonymous guest session with 10 messages a day (`guestPerDay` in `config/assistantLimits`). Couples get 30.
+  - The conversation lives in memory only.
+- **In the Studio, the same panel shows the plan tools below** ("Plan with Aria", or `?assistant=1`). They are rendered into the panel through a portal.
+
+**Aria's plan tools** have four tabs: Chat, Brief, Timeline and Decisions.
 
 - **Chat.** Aria suggests checked changes to the plan:
   - guests, room, Peak or Off-Peak pricing, theme, and items from real inventory;

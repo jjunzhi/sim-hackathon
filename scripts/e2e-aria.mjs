@@ -45,7 +45,7 @@ const cardButton = async (cardText, button) => {
 const send = async (text) => {
   const before = await cdp.evaluate("document.querySelectorAll('[role=dialog] [role=log] > div').length");
   await u.fill("Your message", text);
-  await dialogButton("Send");
+  await cdp.evaluate("document.querySelector('[role=dialog] button[aria-label=Send]').click()");
   await u.waitFor(`document.querySelectorAll('[role=dialog] [role=log] > div').length >= ${before + 2}`, { timeout: 30_000, what: `reply to "${text}"` });
   await sleep(400);
 };

@@ -1,17 +1,13 @@
 "use client";
 
 import { CircleAlert } from "lucide-react";
-import { AuthProvider, useAuth } from "@/lib/auth/auth-provider";
+import { useAuth } from "@/lib/auth/auth-provider";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useT } from "@/lib/i18n/provider";
 
-/** Client-only wrapper for every signed-in screen. */
+/** Client-only wrapper for every signed-in screen. The AuthProvider itself is at the root (components/providers.tsx). */
 export default function AuthShell({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <ConfigGate>{children}</ConfigGate>
-    </AuthProvider>
-  );
+  return <ConfigGate>{children}</ConfigGate>;
 }
 
 function ConfigGate({ children }: { children: React.ReactNode }) {
