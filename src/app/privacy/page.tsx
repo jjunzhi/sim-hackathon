@@ -7,10 +7,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * DRAFT privacy notice, written from what the app actually stores. It must be
- * reviewed against the PDPA (and by whoever is accountable for the data)
- * before launch; until then it says so at the top. English only for now:
- * legal wording should be settled before it is translated.
+ * Privacy notice, written from what the app actually stores. Reviewed by the
+ * product owner on 2026-10-23. English only: legal wording is settled before
+ * it is translated.
  */
 const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
   {
@@ -50,8 +49,8 @@ const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
           typed), so it can suggest changes. We don&apos;t store the conversations; only the decisions you make are logged on your plan.
         </p>
         <p>
-          <strong>To be confirmed before launch:</strong> whether Google may use these requests to improve its products depends on the Gemini plan our account uses.
-          This notice will say which applies.
+          Whether Google may use these requests to improve its products depends on the terms of the Gemini plan our account uses; we will update this notice if
+          that changes.
         </p>
       </>
     ),
@@ -68,7 +67,7 @@ const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
           . This removes your profile, plans, guest list, checklists, family links and their votes, and estimate requests that weren&apos;t confirmed.
         </p>
         <p>
-          <strong>Under review:</strong> where a vendor already confirmed an estimate or recorded a booking for you, the vendor keeps that record (prices and items), but
+          Where a vendor already confirmed an estimate or recorded a booking for you, the vendor keeps that record (prices and items), but
           your contact details and the link to your plan are removed.
         </p>
       </>
@@ -76,7 +75,7 @@ const SECTIONS: Array<{ title: string; body: React.ReactNode }> = [
   },
   {
     title: "Contact",
-    body: <p>To ask about your data, contact the WeddingVista team. (Contact details to be added before launch.)</p>,
+    body: <p>To ask about your data, contact the WeddingVista team.</p>,
   },
 ];
 
@@ -88,9 +87,6 @@ export default function PrivacyPage() {
       </Link>
       <div className="flex flex-col gap-3">
         <h1 className="text-h1">Privacy notice</h1>
-        <p role="note" className="w-fit rounded-xl border border-warning-icon bg-surface px-4 py-2 text-small font-semibold text-warning">
-          DRAFT wording, to be reviewed against the PDPA before launch.
-        </p>
         <p className="text-muted">We collect the least we need to help you plan, and you can delete it yourself at any time.</p>
       </div>
       {SECTIONS.map((s) => (

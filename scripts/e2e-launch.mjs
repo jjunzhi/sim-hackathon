@@ -75,7 +75,7 @@ await u.goto(`${base}/studio/sample-garden-pavilion?plan=${planId}&assistant=1`)
 await u.waitFor("document.querySelector('[role=dialog]')", { timeout: 20_000, what: "assistant opens from ?assistant=1" });
 check("assistant: intro shown", (await dialogText()).includes("Tell me about your wedding"), true);
 await u.fill("Your message", "We'd like 150 guests, the Modern Botanical theme, and add the floral arch");
-await cdp.evaluate("[...document.querySelectorAll('[role=dialog] button')].find(b => b.textContent.trim() === 'Send').click()");
+await cdp.evaluate("document.querySelector('[role=dialog] button[aria-label=Send]').click()");
 await u.waitFor("document.querySelector('[role=dialog]')?.innerText.includes('Suggested changes')", { timeout: 30_000, what: "suggestion" });
 const d = await dialogText();
 check("assistant: DEMO labelled", d.includes("DEMO: the AI isn't switched on yet"), true);
@@ -107,7 +107,7 @@ await cdp.evaluate("localStorage.setItem('wv-locale', 'en')");
 // 5. Launch pages.
 await u.goto(`${base}/privacy`);
 await u.waitForText("Privacy notice", 15_000);
-check("privacy: draft marked", await has("DRAFT wording, to be reviewed against the PDPA before launch."), true);
+check("privacy: no DRAFT notice (reviewed)", await cdp.evaluate("!/DRAFT|before launch/.test(document.body.innerText)"), true);
 await shot("privacy");
 await u.goto(`${base}/no-such-page-here`);
 await u.waitForText("We couldn't find that page", 15_000);

@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/cn";
 import type { Role } from "@/lib/data/users";
 import { useT } from "@/lib/i18n/provider";
-import { CONSENT_IS_DRAFT } from "@/lib/legal";
 
 export function RolePicker({ value, onChange, error }: { value: Role | null; onChange: (r: Role) => void; error?: string }) {
   const t = useT();
@@ -38,7 +37,7 @@ export function RolePicker({ value, onChange, error }: { value: Role | null; onC
               className={cn(
                 "relative flex min-h-11 cursor-pointer gap-3 rounded-xl border bg-surface p-4 transition-colors duration-150",
                 "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
-                checked ? "border-accent bg-accent-tint" : "border-line-strong hover:bg-subtle",
+                checked ? "border-accent bg-accent-tint ring-2 ring-accent" : "border-line-strong hover:bg-subtle",
               )}
             >
               <input
@@ -78,7 +77,6 @@ export function ConsentField({ checked, onChange, error }: { checked: boolean; o
           {t("auth.consent.privacyLink")}
         </a>
       </p>
-      {CONSENT_IS_DRAFT && <p className="text-small font-semibold text-warning">{t("auth.consent.draftNotice")}</p>}
       <Checkbox label={t("auth.consent.label")} checked={checked} onCheckedChange={onChange} />
       {error && <p className="text-small font-medium text-error">{error}</p>}
     </div>

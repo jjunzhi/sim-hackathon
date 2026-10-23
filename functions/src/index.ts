@@ -9,6 +9,7 @@ import { defineSecret } from "firebase-functions/params";
 import { stripeSecretKey } from "./billing/functions.js";
 import { deletionSteps } from "./deletion.js";
 import { handleAssistantRequest, parseAssistantRequest } from "./assistant/assistant.js";
+import { handlePlannerRequest, parsePlannerRequest } from "./assistant/planner.js";
 import { handleRenderRequest, parseRequest } from "./render/request-render.js";
 
 export { venueCapacitySummary } from "./venues/trigger.js";
@@ -110,4 +111,22 @@ export const planAssistant = onCall({ enforceAppCheck, secrets: [geminiApiKey], 
   const raw = (geminiApiKey.value() ?? "").trim();
   const apiKey = raw && !["demo", "none"].includes(raw.toLowerCase()) ? raw : null;
   return handleAssistantRequest(request.auth.uid, req, { db: getFirestore(), apiKey, now: () => new Date() });
+});
+
+/**
+ * Aria as a wedding planner, before there is a plan: recommends listed venues
+ * and decorators and proposes a plan to start. Open to couples and to guest
+ * (anonymous) sessions, which get a smaller daily allowance. Not for vendors.
+ */
+export const ariaChat = onCall({ invoker: "public", enforceAppCheck, secrets: [geminiApiKey], timeoutSeconds: 60, memory: "512MiB" }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please refresh the page and try again.");
+  const guest = request.auth.token.firebase?.sign_in_provider === "anonymous";
+  if (!guest) {
+    const profile = await getFirestore().doc(`users/${request.auth.uid}`).get();
+    if (profile.get("role") === "vendor") throw new HttpsError("permission-denied", "Aria plans weddings for couples.");
+  }
+  const req = parsePlannerRequest(request.data);
+  const raw = (geminiApiKey.value() ?? "").trim();
+  const apiKey = raw && !["demo", "none"].includes(raw.toLowerCase()) ? raw : null;
+  return handlePlannerRequest(request.auth.uid, req, { db: getFirestore(), apiKey, now: () => new Date(), guest });
 });

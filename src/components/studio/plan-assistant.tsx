@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import { useAria } from "@/components/aria/aria-context";
 import type { AriaAlert } from "@/lib/assistant/alerts";
 import { adjustChanges, applyProposal, askAssistant, editableNumber, nameOfKey, type Change, type ChatMessage, type Proposal, type Settled } from "@/lib/assistant/client";
 import { cn } from "@/lib/cn";
@@ -34,7 +34,8 @@ const TAB_KEYS = { chat: "assistant.tab.chat", brief: "assistant.tab.brief", tim
 const SETTLED_KEYS = { applied: "assistant.applied", adjusted: "assistant.adjusted", declined: "assistant.dismissed", alternatives: "assistant.alternativesSent" } as const;
 
 /**
- * Aria, the planning assistant (Rose Garden). A chat that suggests checked
+ * Aria's plan tools, shown in the floating Aria panel while the Studio is
+ * open (the Studio renders this into the panel through a portal). A chat that suggests checked
  * changes to this plan; each suggestion shows what changes and its effect on
  * the estimate, and nothing changes until the couple taps Apply (or Adjust,
  * then Apply selected). Every decision is logged on the plan. The brief and
@@ -42,8 +43,6 @@ const SETTLED_KEYS = { applied: "assistant.applied", adjusted: "assistant.adjust
  * only in this page and never stored.
  */
 export function PlanAssistant({
-  open,
-  onOpenChange,
   venue,
   spaces,
   catalogs,
@@ -57,8 +56,6 @@ export function PlanAssistant({
   messages,
   setMessages,
 }: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
   venue: CatalogVenue;
   spaces: SpaceRow[];
   catalogs: VendorCatalog[];
@@ -77,16 +74,20 @@ export function PlanAssistant({
 }) {
   const { t, locale, date } = useLocale();
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>("chat");
+  // Aria opens on the chat each time, where her alerts are.
+  const { openCount } = useAria();
+  const [tabState, setTabState] = useState<{ count: number; tab: Tab }>({ count: openCount, tab: "chat" });
+  const tab = tabState.count === openCount ? tabState.tab : "chat";
+  const setTab = (next: Tab) => setTabState({ count: openCount, tab: next });
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight });
   }, [messages, busy, tab]);
 
   const perPiece = useMemo(() => {
@@ -214,11 +215,10 @@ export function PlanAssistant({
               e.currentTarget.form?.requestSubmit();
             }
           }}
-          className="min-w-0 flex-1 [&_textarea]:min-h-14"
+          rows={2}
+          className="min-w-0 flex-1 [&_label]:sr-only"
         />
-        <Button type="submit" variant="primary" loading={busy} disabled={!draft.trim()} icon={<Send aria-hidden className="size-4" />}>
-          {t("assistant.send")}
-        </Button>
+        <Button type="submit" variant="primary" loading={busy} disabled={!draft.trim()} aria-label={t("assistant.send")} icon={<Send aria-hidden className="size-4" />} />
       </div>
       <p className="text-small text-muted">
         {t("assistant.note")}
@@ -236,14 +236,8 @@ export function PlanAssistant({
   ) : null;
 
   return (
-    <Modal
-      open={open}
-      onOpenChange={(o) => {
-        // Aria always opens on the chat, where her alerts are.
-        if (!o) setTab("chat");
-        onOpenChange(o);
-      }}
-      title={t("assistant.title")} description={t("assistant.description")} className="sm:max-w-2xl" footer={footer}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/rose-garden" className="text-small font-semibold text-accent-text underline underline-offset-4">
@@ -294,7 +288,7 @@ export function PlanAssistant({
           {(tab === "chat" || !canUse) && (
             <div className="flex flex-col gap-3">
               {canUse && <AriaAlerts alerts={alerts} onAsk={(a) => void send(t(ALERT_PROMPT_KEYS[a.kind]))} />}
-              <div ref={listRef} role="log" aria-live="polite" aria-label={t("assistant.title")} className="flex max-h-[50vh] flex-col gap-3 overflow-y-auto pr-1">
+              <div role="log" aria-live="polite" aria-label={t("assistant.title")} className="flex flex-col gap-3">
                 <Bubble role="model" label={t("assistant.ai")}>
                   {t("assistant.intro")}
                 </Bubble>
@@ -315,7 +309,7 @@ export function PlanAssistant({
                       />
                     ))}
                     {m.shortlist && m.shortlist.length > 0 && (
-                      <section className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 sm:ml-8">
+                      <section className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3">
                         <p className="text-small font-semibold">{t("assistant.shortlist.title")}</p>
                         <ul className="flex flex-col gap-2">
                           {m.shortlist.map((v) => (
@@ -332,12 +326,11 @@ export function PlanAssistant({
                       </section>
                     )}
                     {m.offerRequest && (
-                      <section className="flex flex-col items-start gap-2 rounded-xl border border-line bg-surface p-3 sm:ml-8">
+                      <section className="flex flex-col items-start gap-2 rounded-xl border border-line bg-surface p-3">
                         <p className="text-small font-semibold">{t("assistant.request.title")}</p>
                         <p className="text-small text-muted">{t("assistant.request.body")}</p>
                         <Button
                           onClick={() => {
-                            setTab("chat");
                             onOpenRequest();
                           }}
                         >
@@ -370,7 +363,9 @@ export function PlanAssistant({
           {canUse && tab === "decisions" && planId && <AriaDecisions planId={planId} />}
         </div>
       </div>
-    </Modal>
+      </div>
+      {footer && <div className="flex flex-col gap-2 border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>}
+    </div>
   );
 }
 
@@ -398,7 +393,7 @@ function ProposalCard({
   const { before, after } = estimate(changes);
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-accent bg-surface p-3 sm:ml-8">
+    <div className="flex flex-col gap-2 rounded-xl border border-accent bg-surface p-3">
       <p className="text-small font-semibold">{proposal.label || t("assistant.suggestion")}</p>
       {proposal.label && proposal.summary && <p className="text-small">{proposal.summary}</p>}
       {adjusting ? (

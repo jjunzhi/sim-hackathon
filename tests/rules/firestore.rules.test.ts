@@ -31,7 +31,7 @@ let env: RulesTestEnvironment;
 const db = (uid?: string) => (uid ? env.authenticatedContext(uid).firestore() : env.unauthenticatedContext().firestore());
 const profile = (role: string, extra: Record<string, unknown> = {}) => ({
   role,
-  consent: { version: "draft-2026-10-22", acceptedAt: serverTimestamp() },
+  consent: { version: "2026-10-23", acceptedAt: serverTimestamp() },
   createdAt: serverTimestamp(),
   ...extra,
 });

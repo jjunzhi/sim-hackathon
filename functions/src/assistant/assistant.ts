@@ -24,9 +24,11 @@ import { BRIEF_LIMITS, BRIEF_DIET_TAGS, BRIEF_TRADITIONS, type Brief } from "./t
 /** Chat limits. Defaults here; an admin can override them in config/assistantLimits. */
 export interface AssistantLimits {
   userPerDay: number;
+  /** Visitors chatting with Aria before they have an account (guest session). */
+  guestPerDay: number;
   globalPerDay: number;
 }
-export const DEFAULT_ASSISTANT_LIMITS: AssistantLimits = { userPerDay: 30, globalPerDay: 3000 };
+export const DEFAULT_ASSISTANT_LIMITS: AssistantLimits = { userPerDay: 30, guestPerDay: 10, globalPerDay: 3000 };
 
 export function resolveAssistantLimits(override: unknown): AssistantLimits {
   const o = (override ?? {}) as Partial<Record<keyof AssistantLimits, unknown>>;
@@ -34,7 +36,7 @@ export function resolveAssistantLimits(override: unknown): AssistantLimits {
     const v = o[k];
     return typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : DEFAULT_ASSISTANT_LIMITS[k];
   };
-  return { userPerDay: pick("userPerDay"), globalPerDay: pick("globalPerDay") };
+  return { userPerDay: pick("userPerDay"), guestPerDay: pick("guestPerDay"), globalPerDay: pick("globalPerDay") };
 }
 
 export const REQUEST_LIMITS = { messages: 12, messageChars: 2000, selections: 60, shortlistVenues: 40 } as const;

@@ -7,7 +7,7 @@ import { LanguageMenu } from "@/components/language-menu";
 import { TranslationNote } from "@/components/translation-note";
 import { useT } from "@/lib/i18n/provider";
 
-/** Public landing page. No AuthProvider here, so the language menu runs without profile sync. */
+/** Public landing page. */
 export function Landing({ accountDeleted }: { accountDeleted: boolean }) {
   const t = useT();
   const steps = [

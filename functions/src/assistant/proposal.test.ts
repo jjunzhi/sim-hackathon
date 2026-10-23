@@ -316,7 +316,7 @@ describe("request parsing and limits", () => {
   });
   it("unknown locale falls back to English; limits take admin overrides", () => {
     expect(parseAssistantRequest({ ...base, locale: "fr" }).locale).toBe("en");
-    expect(resolveAssistantLimits({ userPerDay: 5 })).toEqual({ userPerDay: 5, globalPerDay: 3000 });
+    expect(resolveAssistantLimits({ userPerDay: 5 })).toEqual({ userPerDay: 5, guestPerDay: 10, globalPerDay: 3000 });
     expect(resolveAssistantLimits({ userPerDay: "lots" }).userPerDay).toBe(30);
   });
 });

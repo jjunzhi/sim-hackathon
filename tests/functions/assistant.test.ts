@@ -201,3 +201,62 @@ describe("planAssistant", () => {
     await expect(getDoc(doc(env.authenticatedContext(c.uid).firestore(), "usage", id))).resolves.toBeDefined();
   });
 });
+
+// ---------- ariaChat: Aria as a planner, before there is a plan ----------
+const ARIA = `http://127.0.0.1:5001/${PROJECT_ID}/asia-southeast1/ariaChat`;
+type PlannerRes = {
+  result?: { reply: string; shortlist: Array<{ venueId: string }>; vendors: Array<{ vendorUid: string }>; plans: Array<{ venueId: string; headcount: number | null; spaceId: string | null }>; demo: boolean; remainingToday: number };
+  error?: { status: string; message: string };
+};
+async function chat(idToken: string | null, text: string): Promise<PlannerRes> {
+  const res = await fetch(ARIA, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
+    body: JSON.stringify({ data: { messages: [{ role: "user", text }], locale: "en" } }),
+  });
+  return (await res.json()) as PlannerRes;
+}
+async function guestSession() {
+  const res = await fetch(`${AUTH}/accounts:signUp?key=fake-api-key`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ returnSecureToken: true }) });
+  return ((await res.json()) as { idToken: string }).idToken;
+}
+
+describe("ariaChat", () => {
+  beforeEach(async () => {
+    await listedVenue("garden", "SAMPLE Garden Hall", { capacityMin: 50, capacityMax: 300 });
+  });
+
+  it("a guest session can plan: real listed venues and a plan to start, with a guest allowance", async () => {
+    const r = await chat(await guestSession(), "A garden wedding for 120 guests");
+    expect(r.error).toBeUndefined();
+    expect(r.result?.demo).toBe(true);
+    expect(r.result?.shortlist.map((v) => v.venueId)).toContain("garden");
+    expect(r.result?.plans[0]).toMatchObject({ venueId: expect.any(String), headcount: 120 });
+    expect(r.result?.remainingToday).toBe(9);
+  });
+
+  it("only listed venues: a draft venue is never recommended", async () => {
+    await seed(env, "venues/draft", { ...newVenue(OWNER, { name: "SAMPLE Draft Hall" }), status: "draft", createdAt: fixedTime, updatedAt: fixedTime });
+    const r = await chat(await guestSession(), "120 guests please");
+    expect(r.result?.shortlist.map((v) => v.venueId)).not.toContain("draft");
+  });
+
+  it("guests stop at their own daily limit; signed-in couples get the full allowance", async () => {
+    await seed(env, "config/assistantLimits", { guestPerDay: 1 });
+    const token = await guestSession();
+    expect((await chat(token, "hello")).result).toBeDefined();
+    const second = await chat(token, "hello again");
+    expect(second.error?.status).toBe("RESOURCE_EXHAUSTED");
+    expect(second.error?.message).toContain("Create a free account");
+    const c = await signUp(`aria-couple-${Date.now()}@example.test`);
+    await seedUser(env, c.uid, "couple");
+    expect((await chat(c.idToken, "hello")).result?.remainingToday).toBe(29);
+  });
+
+  it("needs a session, and isn't for vendors", async () => {
+    expect((await chat(null, "hi")).error?.status).toBe("UNAUTHENTICATED");
+    const v = await signUp(`aria-vendor-${Date.now()}@example.test`);
+    await seedUser(env, v.uid, "vendor");
+    expect((await chat(v.idToken, "hi")).error?.status).toBe("PERMISSION_DENIED");
+  });
+});

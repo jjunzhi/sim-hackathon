@@ -5,6 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, Bookmark, CalendarPlus, Check, Printer, Share2, Sparkles, Trash2, TriangleAlert } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useAria } from "@/components/aria/aria-context";
 import { AppHeader } from "@/components/app-header";
 import { StorageImage } from "@/components/photos/storage-image";
 import { RenderPanel } from "@/components/render/render-panel";
@@ -101,8 +103,15 @@ function Studio() {
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  // The planning assistant's conversation lives only in this page.
-  const [assistantOpen, setAssistantOpen] = useState(() => params.get("assistant") === "1");
+  // Aria: while the Studio is open, her floating panel shows this plan's tools. Her conversation lives only in this page.
+  const aria = useAria();
+  const { setPlanMode, setOpen: setAriaOpen } = aria;
+  const openAriaOnLoad = params.get("assistant") === "1";
+  useEffect(() => {
+    setPlanMode(true);
+    if (openAriaOnLoad) setAriaOpen(true);
+    return () => setPlanMode(false);
+  }, [setPlanMode, setAriaOpen, openAriaOnLoad]);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   // Seats on the couple's guest list, for Aria's capacity check (counts only).
   const [guestSeats, setGuestSeats] = useState<number | null>(null);
@@ -375,7 +384,7 @@ function Studio() {
               <p className="text-muted">{venue.name}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-            <Button variant="secondary" onClick={() => setAssistantOpen(true)} icon={<Sparkles aria-hidden className="size-4" />}>
+            <Button variant="secondary" onClick={() => setAriaOpen(true)} icon={<Sparkles aria-hidden className="size-4" />}>
               {t("assistant.open")}
             </Button>
             {saved ? (
@@ -402,10 +411,11 @@ function Studio() {
 
         <JourneyStepper steps={STEPS} current={stepIndex} onStepChange={goTo} allowForward label={t("studio.planningSteps")} />
 
-        {catalogs && spaces && (
+        {catalogs &&
+          spaces &&
+          aria.slot &&
+          createPortal(
           <PlanAssistant
-            open={assistantOpen}
-            onOpenChange={setAssistantOpen}
             venue={venue}
             spaces={spaces}
             catalogs={catalogs}
@@ -414,7 +424,7 @@ function Studio() {
             canUse={saved && canSave}
             alerts={ariaAlerts}
             onSave={() => {
-              setAssistantOpen(false);
+              setAriaOpen(false);
               savePlan();
             }}
             onApply={(next) =>
@@ -431,12 +441,13 @@ function Studio() {
               })
             }
             onOpenRequest={() => {
-              setAssistantOpen(false);
+              setAriaOpen(false);
               goTo(3);
             }}
             messages={chat}
             setMessages={setChat}
-          />
+          />,
+          aria.slot,
         )}
 
         {resolved && (
@@ -459,7 +470,7 @@ function Studio() {
           <AriaAlerts
             alerts={ariaAlerts}
             openLabel={t("assistant.open")}
-            onAsk={() => setAssistantOpen(true)}
+            onAsk={() => setAriaOpen(true)}
           />
         )}
 
